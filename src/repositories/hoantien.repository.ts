@@ -1,4 +1,6 @@
 import prisma from '../config/prisma';
+import { BadRequestError, NotFoundError } from '../utils/errors';
+import { cancelRefundedBooking, claimRefundTransaction } from './refundSettlement';
 
 /**
  * Find successful transaction by booking ID
@@ -330,50 +332,28 @@ export const findRefundRequestByIdAdmin = async (maHoanTien: string) => {
  */
 export const approveRefundRequest = async (
   maHoanTien: string,
-  maGiaoDich: string,
 ) => {
   return prisma.$transaction(async (tx) => {
-    // 1. Update LichSuHoanTien
-    const refund = await tx.lichSuHoanTien.update({
-      where: { MaHoanTien: maHoanTien },
+    const refund = await tx.lichSuHoanTien.findFirst({
+      where: { MaHoanTien: maHoanTien, KhaDung: true },
+      include: { GiaoDich: true },
+    });
+    if (!refund) throw new NotFoundError('Không tìm thấy yêu cầu hoàn tiền');
+    if (refund.TrangThai !== 'CHO_XU_LY') throw new BadRequestError('Yêu cầu hoàn tiền đã được xử lý');
+    if (refund.SoTienHoan.lte(0) || refund.SoTienHoan.gt(refund.GiaoDich.SoTien)) {
+      throw new BadRequestError('Số tiền hoàn không hợp lệ');
+    }
+    await claimRefundTransaction(tx, refund.MaGiaoDich);
+    const claimed = await tx.lichSuHoanTien.updateMany({
+      where: { MaHoanTien: maHoanTien, TrangThai: 'CHO_XU_LY', KhaDung: true },
       data: {
         TrangThai: 'DA_HOAN',
         NgayHoanTien: new Date(),
       },
     });
-
-    // 2. Update GiaoDich status to DA_HOAN_TIEN
-    await tx.giaoDich.update({
-      where: { MaGiaoDich: maGiaoDich },
-      data: {
-        TrangThai: 'DA_HOAN_TIEN',
-      },
-    });
-
-    // 3. Get PhieuDatVe and release its seats
-    const transaction = await tx.giaoDich.findUnique({
-      where: { MaGiaoDich: maGiaoDich },
-      select: { MaPhieuDat: true },
-    });
-
-    if (transaction?.MaPhieuDat) {
-      const bookingDetails = await tx.chiTietDatVe.findMany({
-        where: { MaPhieuDat: transaction.MaPhieuDat },
-        select: { MaGheSuatChieu: true },
-      });
-      const seatIds = bookingDetails.map((d: any) => d.MaGheSuatChieu);
-
-      await tx.gheSuatChieu.updateMany({
-        where: { MaGheSuatChieu: { in: seatIds } },
-        data: {
-          TrangThai: 'TRONG',
-          ThoiGianGiuGhe: null,
-          MaTaiKhoanGiu: null,
-        },
-      });
-    }
-
-    return refund;
+    if (claimed.count !== 1) throw new BadRequestError('Yêu cầu hoàn tiền đã được xử lý');
+    await cancelRefundedBooking(tx, refund.GiaoDich.MaPhieuDat);
+    return tx.lichSuHoanTien.findUniqueOrThrow({ where: { MaHoanTien: maHoanTien } });
   });
 };
 
@@ -381,11 +361,13 @@ export const approveRefundRequest = async (
  * Reject a pending refund request
  */
 export const rejectRefundRequest = async (maHoanTien: string) => {
-  return prisma.lichSuHoanTien.update({
-    where: { MaHoanTien: maHoanTien },
+  const result = await prisma.lichSuHoanTien.updateMany({
+    where: { MaHoanTien: maHoanTien, TrangThai: 'CHO_XU_LY', KhaDung: true },
     data: {
       TrangThai: 'TU_CHOI',
     },
   });
+  if (result.count !== 1) throw new BadRequestError('Yêu cầu hoàn tiền đã được xử lý');
+  return prisma.lichSuHoanTien.findUniqueOrThrow({ where: { MaHoanTien: maHoanTien } });
 };
 

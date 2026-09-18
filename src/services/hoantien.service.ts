@@ -290,7 +290,7 @@ export const approveRefundRequestAdmin = async (maHoanTien: string) => {
   }
 
   // Execute approval transaction
-  await approveRefundRequest(maHoanTien, refund.MaGiaoDich);
+  await approveRefundRequest(maHoanTien);
 
   // Retrieve updated refund request detail
   const updatedRefund = await findRefundRequestByIdAdmin(maHoanTien);

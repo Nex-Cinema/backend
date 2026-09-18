@@ -9,6 +9,7 @@ import {
 import prisma from '../config/prisma';
 import { PhieuDatQueryInput, HoanTienInput } from '../validators/giaodich.validator';
 import { NotFoundError, BadRequestError } from '../utils/errors';
+import { cancelRefundedBooking, claimRefundTransaction } from '../repositories/refundSettlement';
 
 export const getDanhSachPhieuDatVe = async (
   query: PhieuDatQueryInput,
@@ -261,6 +262,13 @@ export const hoanTienGiaoDich = async (
   }
 
   const updated = await prisma.$transaction(async (tx) => {
+    // Both refund entry points claim this row before touching refund history.
+    await claimRefundTransaction(tx, maGiaoDich);
+    const pending = await tx.lichSuHoanTien.findFirst({
+      where: { MaGiaoDich: maGiaoDich, TrangThai: 'CHO_XU_LY', KhaDung: true },
+    });
+    if (pending) throw new BadRequestError('Vui lòng xử lý yêu cầu hoàn tiền đang chờ duyệt');
+
     // 1. Create refund history
     await tx.lichSuHoanTien.create({
       data: {
@@ -273,28 +281,8 @@ export const hoanTienGiaoDich = async (
       },
     });
 
-    // 2. Update transaction status
-    const gd = await tx.giaoDich.update({
-      where: { MaGiaoDich: maGiaoDich },
-      data: { TrangThai: TrangThaiGiaoDich.DA_HOAN_TIEN },
-    });
-
-    // 3. Cancel booking
-    await tx.phieuDatVe.update({
-      where: { MaPhieuDat: giaoDich.MaPhieuDat },
-      data: { TrangThai: TrangThaiPhieuDatVe.DA_HUY },
-    });
-
-    // 4. Release seats
-    const maGheSuatChieus = giaoDich.PhieuDatVe.ChiTietDatVes.map((ct) => ct.MaGheSuatChieu);
-    if (maGheSuatChieus.length > 0) {
-      await tx.gheSuatChieu.updateMany({
-        where: { MaGheSuatChieu: { in: maGheSuatChieus } },
-        data: { TrangThai: TrangThaiGheSuatChieu.TRONG },
-      });
-    }
-
-    return gd;
+    await cancelRefundedBooking(tx, giaoDich.MaPhieuDat);
+    return tx.giaoDich.findUniqueOrThrow({ where: { MaGiaoDich: maGiaoDich } });
   });
 
   return updated;

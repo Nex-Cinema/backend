@@ -407,6 +407,7 @@ describe('🎬 Phim Integration Tests', () => {
 
     it('should block updating KhaDung of movie if any future showtime exists', async () => {
       const movie = await createTestMovie({ TenPhim: 'Movie Future Showtime', KhaDung: true });
+      const futureDay = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       
       const loaiNgay = await prisma.loaiNgay.create({
         data: { TenLoaiNgay: 'Weekday Test F', PhuThu: 0 },
@@ -426,7 +427,7 @@ describe('🎬 Phim Integration Tests', () => {
           MaPhim: movie.MaPhim,
           MaPhong: phongChieu.MaPhong,
           MaLoaiNgay: loaiNgay.MaLoaiNgay,
-          NgayChieu: new Date('2026-06-15'),
+          NgayChieu: futureDay,
           GioChieu: new Date('2026-06-15T18:00:00Z'),
           GiaVeGoc: 50000,
         },
