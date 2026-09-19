@@ -5,7 +5,7 @@ Existing package-lock.json edits are user-owned and excluded from task commits.
 
 - [x] BE-1: Establish a safe isolated test database guard and refund regression tests; install dependencies and record baseline checks.
 - [x] BE-2: Make refund approval/rejection and direct admin refunds atomic, prevent duplicate processing, and preserve seats owned by newer bookings. Verify regression tests and TypeScript build; replace the stale future-showtime test date.
-- [ ] BE-3: Document Admin flows, refund semantics, test commands and interview talking points. Verify documentation against implementation.
+- [x] BE-3: Document Admin flows, refund semantics, test commands and interview talking points. Verify documentation against implementation.
 
 Delivery: push the task branch and create a backend PR targeting main; user merges.
 Frontend work is tracked in the frontend repository's INTERVIEW_TODO.md.
@@ -19,3 +19,7 @@ metadata, rooms, layouts, showtimes, shifts, statistics, users, movies).
 `node node_modules/typescript/bin/tsc --noEmit` passed.
 Concurrency cases cover eight approvals, approval vs rejection, direct refunds,
 both refund entry points, rollback and protection of newer seat reservations.
+
+BE-3: ADMIN_INTERVIEW.md maps routes to implementation, describes conditional
+updates and rollback, provides isolated verification commands and documents
+manual transfer, customer-flow, partial-refund and rejection-audit limitations.
