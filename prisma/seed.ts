@@ -6,6 +6,19 @@ const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 const DEFAULT_PASSWORD = "123456";
 
+const bangkokCalendarDate = (offsetInDays = 0) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const date = new Date(Date.UTC(Number(value.year), Number(value.month) - 1, Number(value.day)));
+  date.setUTCDate(date.getUTCDate() + offsetInDays);
+  return date;
+};
+
 async function main() {
   console.log("🌱 Bắt đầu seed dữ liệu...");
 
@@ -210,17 +223,16 @@ async function main() {
     const maNhanVien = staffAccount.NhanVien.MaNhanVien;
     
     // Generate dates for current week (Mon-Sun)
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 is Sunday, 1-6 is Mon-Sat
+    const today = bangkokCalendarDate();
+    const currentDay = today.getUTCDay(); // 0 is Sunday, 1-6 is Mon-Sat
     const mondayDiff = currentDay === 0 ? -6 : 1 - currentDay;
     const monday = new Date(today);
-    monday.setDate(today.getDate() + mondayDiff);
-    monday.setHours(0, 0, 0, 0);
+    monday.setUTCDate(today.getUTCDate() + mondayDiff);
 
     // Seed mock shifts for Monday (index 0) to Sunday (index 6)
     for (let i = 0; i < 7; i++) {
       const ngayLamViec = new Date(monday);
-      ngayLamViec.setDate(monday.getDate() + i);
+      ngayLamViec.setUTCDate(monday.getUTCDate() + i);
 
       // We assign Ca sáng on Mon/Thu/Sun, Ca chiều on Tue/Fri, Ca tối on Wed/Sat
       let targetCaTemplate = dbCaLamViecs[0]; // Ca sáng
@@ -332,13 +344,18 @@ async function main() {
     });
     console.log("✅ Đã tạo Loại ngày");
 
+    // Demo dates are relative to the day the seed runs, so interview data never expires.
+    const demoDate = (offsetInDays: number) => bangkokCalendarDate(offsetInDays);
+
+    const showtime = (hour: number, minute = 0) => new Date(Date.UTC(1970, 0, 1, hour, minute, 0));
+
     const phimData = [
       {
         TenPhim: "Avengers: Endgame",
         ThoiLuong: 181,
         TheLoai: "Hành động, Khoa học viễn tưởng",
-        NgayKhoiChieu: new Date("2026-05-01"),
-        NgayKetThuc: new Date("2026-07-01"),
+        NgayKhoiChieu: demoDate(-30),
+        NgayKetThuc: demoDate(30),
         DaoDien: "Anthony Russo, Joe Russo",
         DienVien: "Robert Downey Jr., Chris Evans, Mark Ruffalo, Chris Hemsworth",
         GioiHanTuoi: GioiHanTuoi.C13,
@@ -351,8 +368,8 @@ async function main() {
         TenPhim: "Inception",
         ThoiLuong: 148,
         TheLoai: "Khoa học viễn tưởng, Hành động",
-        NgayKhoiChieu: new Date("2026-06-15"),
-        NgayKetThuc: null,
+        NgayKhoiChieu: demoDate(-14),
+        NgayKetThuc: demoDate(45),
         DaoDien: "Christopher Nolan",
         DienVien: "Leonardo DiCaprio, Joseph Gordon-Levitt, Elliot Page",
         GioiHanTuoi: GioiHanTuoi.C13,
@@ -365,8 +382,8 @@ async function main() {
         TenPhim: "The Lion King",
         ThoiLuong: 118,
         TheLoai: "Hoạt hình, Gia đình",
-        NgayKhoiChieu: new Date("2026-07-01"),
-        NgayKetThuc: new Date("2026-09-01"),
+        NgayKhoiChieu: demoDate(14),
+        NgayKetThuc: demoDate(75),
         DaoDien: "Jon Favreau",
         DienVien: "Donald Glover, Beyoncé, Seth Rogen, Chiwetel Ejiofor",
         GioiHanTuoi: GioiHanTuoi.P,
@@ -379,7 +396,7 @@ async function main() {
         TenPhim: "Joker",
         ThoiLuong: 122,
         TheLoai: "Tâm lý, Tội phạm",
-        NgayKhoiChieu: new Date("2026-08-01"),
+        NgayKhoiChieu: demoDate(30),
         NgayKetThuc: null,
         DaoDien: "Todd Phillips",
         DienVien: "Joaquin Phoenix, Robert De Niro, Zazie Beetz",
@@ -393,8 +410,8 @@ async function main() {
         TenPhim: "Spider-Man: No Way Home",
         ThoiLuong: 148,
         TheLoai: "Hành động, Khoa học viễn tưởng",
-        NgayKhoiChieu: new Date("2026-09-15"),
-        NgayKetThuc: new Date("2026-11-15"),
+        NgayKhoiChieu: demoDate(-7),
+        NgayKetThuc: demoDate(60),
         DaoDien: "Jon Watts",
         DienVien: "Tom Holland, Zendaya, Benedict Cumberbatch, Jamie Foxx",
         GioiHanTuoi: GioiHanTuoi.C13,
@@ -407,7 +424,7 @@ async function main() {
         TenPhim: "Interstellar",
         ThoiLuong: 169,
         TheLoai: "Khoa học viễn tưởng, Phiêu lưu",
-        NgayKhoiChieu: new Date("2026-10-01"),
+        NgayKhoiChieu: demoDate(21),
         NgayKetThuc: null,
         DaoDien: "Christopher Nolan",
         DienVien: "Matthew McConaughey, Anne Hathaway, Jessica Chastain",
@@ -421,8 +438,8 @@ async function main() {
         TenPhim: "Parasite",
         ThoiLuong: 132,
         TheLoai: "Tâm lý, Giật gân",
-        NgayKhoiChieu: new Date("2026-05-15"),
-        NgayKetThuc: new Date("2026-07-15"),
+        NgayKhoiChieu: demoDate(-40),
+        NgayKetThuc: demoDate(10),
         DaoDien: "Bong Joon Ho",
         DienVien: "Song Kang-ho, Lee Sun-kyun, Cho Yeo-jeong",
         GioiHanTuoi: GioiHanTuoi.C18,
@@ -435,8 +452,8 @@ async function main() {
         TenPhim: "Inside Out 2",
         ThoiLuong: 96,
         TheLoai: "Hoạt hình, Gia đình, Hài hước",
-        NgayKhoiChieu: new Date("2026-06-01"),
-        NgayKetThuc: new Date("2026-08-30"),
+        NgayKhoiChieu: demoDate(-20),
+        NgayKetThuc: demoDate(20),
         DaoDien: "Kelsey Mann",
         DienVien: "Amy Poehler, Phyllis Smith, Lewis Black",
         GioiHanTuoi: GioiHanTuoi.P,
@@ -449,8 +466,8 @@ async function main() {
         TenPhim: "Dune: Part Two",
         ThoiLuong: 166,
         TheLoai: "Khoa học viễn tưởng, Phiêu lưu",
-        NgayKhoiChieu: new Date("2026-03-01"),
-        NgayKetThuc: new Date("2026-05-30"),
+        NgayKhoiChieu: demoDate(-90),
+        NgayKetThuc: demoDate(-10),
         DaoDien: "Denis Villeneuve",
         DienVien: "Timothée Chalamet, Zendaya, Rebecca Ferguson",
         GioiHanTuoi: GioiHanTuoi.C13,
@@ -463,8 +480,8 @@ async function main() {
         TenPhim: "Spirited Away",
         ThoiLuong: 125,
         TheLoai: "Hoạt hình, Kỳ ảo",
-        NgayKhoiChieu: new Date("2026-01-01"),
-        NgayKetThuc: null,
+        NgayKhoiChieu: demoDate(-10),
+        NgayKetThuc: demoDate(35),
         DaoDien: "Hayao Miyazaki",
         DienVien: "Rumi Hiiragi, Miyu Irino, Mari Natsuki",
         GioiHanTuoi: GioiHanTuoi.P,
@@ -487,58 +504,63 @@ async function main() {
         movieIndex: 0, // Avengers: Endgame
         phong: phong2,
         loaiNgay: lnCuoiTuan,
-        ngayChieu: new Date("2026-06-01"),
-        gioChieu: new Date("1970-01-01T19:00:00Z"),
+        ngayChieu: demoDate(0),
+        gioChieu: showtime(19, 0),
         giaVeGoc: 90000.0,
       },
       {
         movieIndex: 7, // Inside Out 2
         phong: phong1,
         loaiNgay: lnThuong,
-        ngayChieu: new Date("2026-06-10"),
-        gioChieu: new Date("1970-01-01T14:30:00Z"),
+        ngayChieu: demoDate(0),
+        gioChieu: showtime(16, 0),
         giaVeGoc: 70000.0,
       },
       {
         movieIndex: 1, // Inception
         phong: phong1,
         loaiNgay: lnThuong,
-        ngayChieu: new Date("2026-06-11"),
-        gioChieu: new Date("1970-01-01T10:00:00Z"),
+        ngayChieu: demoDate(0),
+        gioChieu: showtime(20, 30),
         giaVeGoc: 70000.0,
       },
       {
         movieIndex: 4, // Spider-Man: No Way Home
         phong: phong2,
         loaiNgay: lnCuoiTuan,
-        ngayChieu: new Date("2026-06-12"),
-        gioChieu: new Date("1970-01-01T15:30:00Z"),
+        ngayChieu: demoDate(1),
+        gioChieu: showtime(10, 0),
         giaVeGoc: 85000.0,
       },
       {
-        movieIndex: 3, // Joker
+        movieIndex: 9, // Spirited Away
         phong: phong1,
         loaiNgay: lnThuong,
-        ngayChieu: new Date("2026-06-13"),
-        gioChieu: new Date("1970-01-01T20:00:00Z"),
+        ngayChieu: demoDate(1),
+        gioChieu: showtime(14, 30),
         giaVeGoc: 75000.0,
       },
       {
-        movieIndex: 8, // Dune: Part Two
+        movieIndex: 0, // Avengers: Endgame
         phong: phong2,
         loaiNgay: lnCuoiTuan,
-        ngayChieu: new Date("2026-06-14"),
-        gioChieu: new Date("1970-01-01T17:00:00Z"),
+        ngayChieu: demoDate(2),
+        gioChieu: showtime(18, 30),
         giaVeGoc: 95000.0,
       },
       {
-        movieIndex: 5, // Interstellar
+        movieIndex: 6, // Parasite
         phong: phong1,
         loaiNgay: lnThuong,
-        ngayChieu: new Date("2026-06-15"),
-        gioChieu: new Date("1970-01-01T09:30:00Z"),
+        ngayChieu: demoDate(2),
+        gioChieu: showtime(21, 0),
         giaVeGoc: 70000.0,
       },
+      { movieIndex: 1, phong: phong2, loaiNgay: lnThuong, ngayChieu: demoDate(3), gioChieu: showtime(19, 30), giaVeGoc: 85000.0 },
+      { movieIndex: 7, phong: phong1, loaiNgay: lnThuong, ngayChieu: demoDate(4), gioChieu: showtime(17, 0), giaVeGoc: 70000.0 },
+      { movieIndex: 4, phong: phong2, loaiNgay: lnCuoiTuan, ngayChieu: demoDate(5), gioChieu: showtime(20, 0), giaVeGoc: 95000.0 },
+      { movieIndex: 9, phong: phong1, loaiNgay: lnCuoiTuan, ngayChieu: demoDate(6), gioChieu: showtime(15, 30), giaVeGoc: 80000.0 },
+      { movieIndex: 0, phong: phong2, loaiNgay: lnCuoiTuan, ngayChieu: demoDate(7), gioChieu: showtime(18, 0), giaVeGoc: 95000.0 },
     ];
 
     const createdShowtimes = [];
