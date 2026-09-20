@@ -22,6 +22,14 @@ const bangkokCalendarDate = (offsetInDays = 0) => {
 async function main() {
   console.log("🌱 Bắt đầu seed dữ liệu...");
 
+  await prisma.cauHinhCongThanhToan.createMany({
+    data: [
+      { NhaCungCap: 'PAYOS', KichHoat: true },
+      { NhaCungCap: 'VNPAY', KichHoat: true },
+    ],
+    skipDuplicates: true,
+  });
+
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
 
   // Check if we already have TaiKhoan data

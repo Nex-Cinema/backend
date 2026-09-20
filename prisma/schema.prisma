@@ -390,6 +390,14 @@ model GiaoDich {
   @@map("giao_dich")
 }
 
+model CauHinhCongThanhToan {
+  NhaCungCap  String   @id @db.VarChar(20)
+  KichHoat    Boolean  @default(true)
+  NgayCapNhat DateTime @updatedAt
+
+  @@map("cau_hinh_cong_thanh_toan")
+}
+
 model LichSuHoanTien {
   MaHoanTien   String            @id @default(uuid()) @db.VarChar(36)
   MaGiaoDich   String            @db.VarChar(36)

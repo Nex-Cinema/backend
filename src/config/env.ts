@@ -38,6 +38,8 @@ export const env = {
 
   // API
   API_PREFIX: process.env.API_PREFIX ?? '/api/v1',
+  BACKEND_PUBLIC_URL: (process.env.BACKEND_PUBLIC_URL ?? 'http://localhost:5000').replace(/\/$/, ''),
+  FRONTEND_URL: (process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(/\/$/, ''),
 
   // SMTP
   SMTP_HOST: process.env.SMTP_HOST,
@@ -58,7 +60,8 @@ export const env = {
   VNPAY_TMN_CODE: (process.env.VNPAY_TMN_CODE ?? '').trim(),
   VNPAY_HASH_SECRET: (process.env.VNPAY_HASH_SECRET ?? '').trim(),
   VNPAY_PAYMENT_URL: (process.env.VNPAY_PAYMENT_URL ?? 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html').trim(),
-  VNPAY_RETURN_URL: (process.env.VNPAY_RETURN_URL ?? '').trim(),
+  VNPAY_CALLBACK_URL: (process.env.VNPAY_CALLBACK_URL ?? '').trim(),
+  VNPAY_FRONTEND_RETURN_URL: (process.env.VNPAY_FRONTEND_RETURN_URL ?? '').trim(),
   VNPAY_IPN_URL: (process.env.VNPAY_IPN_URL ?? '').trim(),
 
   // Helpers

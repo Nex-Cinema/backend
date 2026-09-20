@@ -3,8 +3,11 @@ import * as paymentController from '../controllers/payment.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { requireRoles } from '../middlewares/role.middleware';
 import { Role } from '@prisma/client';
+import { getPublicSettings } from '../controllers/paymentGateway.controller';
 
 const router = Router();
+
+router.get('/gateways', getPublicSettings);
 
 /**
  * @route   POST /api/v1/payment/payos/create
