@@ -96,7 +96,8 @@ export const vnpayReturn = asyncHandler(async (req: Request, res: Response) => {
     redirectStatus = 'success';
   }
 
-  const redirectUrl = `${env.VNPAY_RETURN_URL}?maGiaoDich=${vnp_TxnRef || ''}&status=${redirectStatus}`;
+  const frontendReturnUrl = env.VNPAY_FRONTEND_RETURN_URL || `${env.FRONTEND_URL}/payment/vnpay-return`;
+  const redirectUrl = `${frontendReturnUrl}?maGiaoDich=${vnp_TxnRef || ''}&status=${redirectStatus}`;
   return res.redirect(redirectUrl);
 });
 

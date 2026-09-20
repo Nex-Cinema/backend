@@ -12,6 +12,7 @@ import giaoDichRoutes from './giaodich.routes';
 import caLamViecRoutes from './calamviec.routes';
 import thongKeRoutes from './thongke.routes';
 import hoanTienRoutes from './hoantien.routes';
+import paymentGatewayRoutes from './paymentGateway.routes';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/giao-dich', giaoDichRoutes);
 router.use('/ca-lam-viec', caLamViecRoutes);
 router.use('/thong-ke', thongKeRoutes);
 router.use('/hoan-tien', hoanTienRoutes);
+router.use('/cong-thanh-toan', paymentGatewayRoutes);
 
 export default router;

@@ -5,11 +5,13 @@ import { BadRequestError, NotFoundError } from '../utils/errors';
 import { findCustomerByAccountId } from '../repositories/datve.repository';
 import { generateVNPaySecureHash, verifyVNPaySignature, sortObject, stringifyVNPayParams, normalizeIp } from '../utils/vnpay.util';
 import qs from 'qs';
+import { assertPaymentGatewayAvailable } from './paymentGateway.service';
 
 /**
  * Creates a PayOS payment link for a pending booking.
  */
 export const createPayosLink = async (maPhieuDat: string, maTaiKhoan: string) => {
+  await assertPaymentGatewayAvailable('PAYOS');
   const customer = await findCustomerByAccountId(maTaiKhoan);
   if (!customer) {
     throw new BadRequestError('Tài khoản không phải là khách hàng hợp lệ.');
@@ -399,6 +401,7 @@ export const createVnpayLink = async (
   maTaiKhoan: string,
   clientIp: string
 ) => {
+  await assertPaymentGatewayAvailable('VNPAY');
   const customer = await findCustomerByAccountId(maTaiKhoan);
   if (!customer) {
     throw new BadRequestError('Tài khoản không phải là khách hàng hợp lệ.');
@@ -483,7 +486,7 @@ export const createVnpayLink = async (
     vnp_Locale: 'vn',
     vnp_OrderInfo: `Thanh toan phieu dat ve ${maPhieuDat}`.substring(0, 100),
     vnp_OrderType: 'billpayment',
-    vnp_ReturnUrl: env.VNPAY_RETURN_URL,
+    vnp_ReturnUrl: env.VNPAY_CALLBACK_URL || `${env.BACKEND_PUBLIC_URL}${env.API_PREFIX}/payment/vnpay/return`,
     vnp_TxnRef: vnpTxnRef,
   };
 
