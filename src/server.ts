@@ -3,7 +3,7 @@ import app from './app';
 import { env } from './config/env';
 import prisma from './config/prisma';
 import { startReleaseExpiredSeatHoldsJob } from './jobs/releaseExpiredSeatHolds.job';
-import { ensureDemoBookingData } from './services/demoData.service';
+import { ensureDemoBookingData } from './modules/booking';
 
 const PORT = env.PORT;
 

@@ -43,6 +43,11 @@ describe('📅 Staff Shift Management Integration Tests', () => {
   });
 
   beforeEach(async () => {
+    await prisma.cauHinhVanHanh.upsert({
+      where: { Id: 1 },
+      update: { ThoiGianGiuGhePhut: 10, CuaSoCheckInPhut: 30, HanHuyCaTruocGio: 2 },
+      create: { Id: 1, ThoiGianGiuGhePhut: 10, CuaSoCheckInPhut: 30, HanHuyCaTruocGio: 2 },
+    });
     // Clear registrations and shifts before each test
     await prisma.chiTietCaLamViec.deleteMany({});
     await prisma.caLamViec.deleteMany({});
@@ -458,6 +463,38 @@ describe('📅 Staff Shift Management Integration Tests', () => {
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toContain('ít nhất 2 giờ');
+    });
+
+    it('applies the configured shift cancellation cutoff', async () => {
+      await prisma.cauHinhVanHanh.update({
+        where: { Id: 1 },
+        data: { HanHuyCaTruocGio: 0 },
+      });
+      const now = new Date();
+      const nearTime = new Date(now.getTime() + 60 * 60 * 1000);
+      const shiftNear = await prisma.caLamViec.create({
+        data: {
+          TenCa: 'Ca Theo Policy',
+          GioBatDau: nearTime,
+          GioKetThuc: new Date(now.getTime() + 3 * 60 * 60 * 1000),
+          SoNguoiToiDa: 1,
+          KhaDung: true,
+        },
+      });
+      const registration = await prisma.chiTietCaLamViec.create({
+        data: {
+          MaNhanVien: staffAccount1.NhanVien.MaNhanVien,
+          MaCa: shiftNear.MaCa,
+          NgayLamViec: new Date(now.toISOString().split('T')[0]),
+          KhaDung: true,
+        },
+      });
+
+      const res = await request(app)
+        .patch(`/api/v1/staff/lich-lam-viec/${registration.MaChiTietCa}/huy`)
+        .set('Authorization', `Bearer ${staffToken1}`);
+
+      expect(res.status).toBe(200);
     });
   });
 

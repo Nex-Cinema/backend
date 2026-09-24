@@ -1,19 +1,32 @@
 import { Router, Request, Response } from 'express';
-import authRoutes from './auth.routes';
-import phimRoutes from './phim.routes';
-import suatChieuRoutes from './suatchieu.routes';
-import adminRouter from './admin';
-import datVeRoutes from './datve.routes';
-import lichsuRoutes from './lichsu.routes';
-import danhgiaRoutes from './danhgia.routes';
-import hoantienRoutes from './hoantien.routes';
-import taiKhoanRoutes from './taiKhoan.routes';
-import staffBanVeRoutes from './staffBanVe.routes';
-import staffSoatVeRoutes from './staffSoatVe.routes';
-import staffLichLamViecRoutes from './staffLichLamViec.routes';
-import staffHoSoRoutes from './staffHoSo.routes';
-import paymentRoutes from './payment.routes';
+import { Role } from '@prisma/client';
 import { sendSuccess } from '../utils/response';
+import { authMiddleware } from '../middlewares/auth.middleware';
+import { requireRoles } from '../middlewares/role.middleware';
+
+// ============================================================
+// Module routes — feature-based structure
+// ============================================================
+import { authRouter, accountRouter, userAdminRouter, staffProfileRouter } from '../modules/identity';
+import { movieRouter, movieAdminRouter, reviewRouter, movieReviewRouter } from '../modules/catalog';
+import { publicRouter as showtimeRouter, adminRouter as showtimeAdminRouter } from '../modules/showtime';
+import { reservationRouter, historyRouter } from '../modules/booking';
+import {
+  paymentRouter,
+  paymentGatewayPublicRouter,
+  paymentGatewayAdminRouter,
+  refundRouter,
+  refundAdminRouter,
+  transactionAdminRouter,
+} from '../modules/billing';
+import { staffRouter as boxOfficeStaffRouter } from '../modules/box-office';
+import { staffRouter as admissionStaffRouter } from '../modules/admission';
+import { scheduleStaffRouter, shiftAdminRouter } from '../modules/workforce';
+import { adminRouter as reportingAdminRouter, staffRouter as reportingStaffRouter } from '../modules/reporting';
+
+// Admin-only routes
+import { metadataAdminRouter, roomAdminRouter, seatMapAdminRouter } from '../modules/cinema';
+import { adminRouter as operationalSettingsAdminRouter } from '../modules/operational-settings';
 
 const router = Router();
 
@@ -29,22 +42,45 @@ router.get('/health', (req: Request, res: Response) => {
 });
 
 // ========================
-// Mount Feature Routes
+// Public / Customer Routes
 // ========================
-router.use('/auth', authRoutes);
-router.use('/phim', phimRoutes);
-router.use('/suat-chieu', suatChieuRoutes);
+router.use('/auth', authRouter);
+router.use('/phim', movieReviewRouter, movieRouter);
+router.use('/suat-chieu', showtimeRouter);
+router.use('/dat-ve', reservationRouter);
+router.use('/payment', paymentGatewayPublicRouter, paymentRouter);
+router.use('/lich-su-giao-dich', historyRouter);
+router.use('/danh-gia', reviewRouter);
+router.use('/hoan-tien', refundRouter);
+router.use('/tai-khoan', accountRouter);
+
+// Staff routes (own auth/role checks inside each route file)
+router.use('/', boxOfficeStaffRouter);
+router.use('/', admissionStaffRouter);
+router.use('/', scheduleStaffRouter);
+router.use('/', staffProfileRouter);
+router.use('/', reportingStaffRouter);
+
+// ========================
+// Admin Routes (auth + ADMIN role applied globally)
+// ========================
+const adminRouter = Router();
+adminRouter.use(authMiddleware);
+adminRouter.use(requireRoles(Role.ADMIN));
+
+adminRouter.use('/', metadataAdminRouter);
+adminRouter.use('/phong-chieu', roomAdminRouter);
+adminRouter.use('/suat-chieu', showtimeAdminRouter);
+adminRouter.use('/phim', movieAdminRouter);
+adminRouter.use('/so-do-ghe', seatMapAdminRouter);
+adminRouter.use('/nguoi-dung', userAdminRouter);
+adminRouter.use('/giao-dich', transactionAdminRouter);
+adminRouter.use('/ca-lam-viec', shiftAdminRouter);
+adminRouter.use('/thong-ke', reportingAdminRouter);
+adminRouter.use('/hoan-tien', refundAdminRouter);
+adminRouter.use('/cong-thanh-toan', paymentGatewayAdminRouter);
+adminRouter.use('/cau-hinh-van-hanh', operationalSettingsAdminRouter);
+
 router.use('/admin', adminRouter);
-router.use('/dat-ve', datVeRoutes);
-router.use('/payment', paymentRoutes);
-router.use('/lich-su-giao-dich', lichsuRoutes);
-router.use('/danh-gia', danhgiaRoutes);
-router.use('/hoan-tien', hoantienRoutes);
-router.use('/tai-khoan', taiKhoanRoutes);
-router.use('/', staffBanVeRoutes);
-router.use('/', staffSoatVeRoutes);
-router.use('/', staffLichLamViecRoutes);
-router.use('/', staffHoSoRoutes);
 
 export default router;
-

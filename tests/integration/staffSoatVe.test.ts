@@ -57,6 +57,11 @@ describe('🖥️ Staff Ticket Validation and Check-in Integration Tests', () =>
   });
 
   beforeEach(async () => {
+    await prisma.cauHinhVanHanh.upsert({
+      where: { Id: 1 },
+      update: { ThoiGianGiuGhePhut: 10, CuaSoCheckInPhut: 30, HanHuyCaTruocGio: 2 },
+      create: { Id: 1, ThoiGianGiuGhePhut: 10, CuaSoCheckInPhut: 30, HanHuyCaTruocGio: 2 },
+    });
     // Clean up dynamic data
     await prisma.chiTietCaLamViec.deleteMany({});
     await prisma.caLamViec.deleteMany({});
@@ -214,6 +219,27 @@ describe('🖥️ Staff Ticket Validation and Check-in Integration Tests', () =>
       expect(res.body.data.ticketInfo.MaChiTietDat).toBe(ticket1.MaChiTietDat);
       expect(res.body.data.ticketInfo.TenPhim).toBe('Checkin Test Phim');
       expect(res.body.data.ticketInfo.Ghe).toBe('C1');
+    });
+
+    it('should apply the configured check-in window and message', async () => {
+      await prisma.cauHinhVanHanh.update({
+        where: { Id: 1 },
+        data: { CuaSoCheckInPhut: 10 },
+      });
+      const showtimeInFifteenMinutes = new Date(Date.now() + 15 * 60 * 1000);
+      await prisma.suatChieu.update({
+        where: { MaSuatChieu: showtime.MaSuatChieu },
+        data: { NgayChieu: showtimeInFifteenMinutes, GioChieu: showtimeInFifteenMinutes },
+      });
+
+      const res = await request(app)
+        .post('/api/v1/staff/soat-ve/kiem-tra')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ MaChiTietDat: ticket1.MaChiTietDat });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.valid).toBe(false);
+      expect(res.body.data.reason).toContain('10 phút');
     });
 
     it('should reject a non-existent ticket', async () => {

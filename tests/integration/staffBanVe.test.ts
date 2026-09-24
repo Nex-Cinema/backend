@@ -355,7 +355,7 @@ describe('🖥️ Staff POS Sell Ticket at Counter Integration Tests', () => {
 
     it('should fail if seats are actively held by another customer', async () => {
       // Put an active hold on seat2
-      const futureHold = new Date(Date.now() + 5 * 60 * 1000);
+      const futureHold = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat2.MaGheSuatChieu },
         data: {

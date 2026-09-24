@@ -10,6 +10,7 @@ const BCRYPT_SALT_ROUNDS = 4; // Faster for testing
  */
 export const cleanupTestData = async () => {
   // Delete in reverse order of foreign key dependency
+  await prisma.cauHinhVanHanh.deleteMany({});
   await prisma.chiTietCaLamViec.deleteMany({});
   await prisma.caLamViec.deleteMany({});
   await prisma.lichSuHoanTien.deleteMany({});

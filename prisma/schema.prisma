@@ -400,6 +400,16 @@ model CauHinhCongThanhToan {
   @@map("cau_hinh_cong_thanh_toan")
 }
 
+model CauHinhVanHanh {
+  Id                     Int      @id @default(1)
+  ThoiGianGiuGhePhut     Int      @default(10)
+  CuaSoCheckInPhut       Int      @default(30)
+  HanHuyCaTruocGio       Int      @default(2)
+  NgayCapNhat            DateTime @updatedAt
+
+  @@map("cau_hinh_van_hanh")
+}
+
 model LichSuHoanTien {
   MaHoanTien   String            @id @default(uuid()) @db.VarChar(36)
   MaGiaoDich   String            @db.VarChar(36)
