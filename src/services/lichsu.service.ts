@@ -6,6 +6,7 @@ import {
 } from '../repositories/lichsu.repository';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { BookingHistoryQueryInput } from '../validators/lichsu.validator';
+import { formatSeatLabel } from '../utils/seatPricing';
 
 /**
  * Retrieve transaction/booking history list for the customer
@@ -96,7 +97,9 @@ export const getChiTietLichSu = async (maPhieuDat: string, maTaiKhoan: string) =
           MaGheSuatChieu: gsc.MaGheSuatChieu,
           ViTriDay: gsc.Ghe.ViTriDay,
           ViTriCot: gsc.Ghe.ViTriCot,
-          TenGhe: `${gsc.Ghe.ViTriDay}${gsc.Ghe.ViTriCot}`,
+          TenGhe: formatSeatLabel(gsc.Ghe.ViTriDay, gsc.Ghe.ViTriCot, gsc.Ghe.DoRongCot),
+          DoRongCot: gsc.Ghe.DoRongCot,
+          SucChua: gsc.Ghe.SucChua,
           TenLoaiGhe: gsc.Ghe.LoaiGhe.TenLoaiGhe,
         },
         SuatChieu: {

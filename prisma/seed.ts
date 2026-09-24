@@ -288,7 +288,19 @@ async function main() {
     });
 
     const soDo = await prisma.soDoGhe.create({
-      data: { TenSoDo: "Sơ đồ chuẩn 5x5", SoHang: 5, SoCot: 5 },
+      data: {
+        TenSoDo: "Sơ đồ chuẩn 5x6",
+        SoHang: 5,
+        SoCot: 6,
+        CauTruc: JSON.stringify({
+          aisles: { rows: [], cols: [], custom: [] },
+          couples: [
+            { row: 5, startCol: 1 },
+            { row: 5, startCol: 3 },
+            { row: 5, startCol: 5 },
+          ],
+        }),
+      },
     });
 
     const phong1 = await prisma.phongChieu.create({
@@ -318,16 +330,21 @@ async function main() {
       if (r === "C" || r === "D") maLoaiGhe = lgVIP.MaLoaiGhe;
       if (r === "E") maLoaiGhe = lgSweetbox.MaLoaiGhe;
 
-      for (let c = 1; c <= 5; c++) {
+      const columns = r === "E" ? [1, 3, 5] : [1, 2, 3, 4, 5, 6];
+      for (const c of columns) {
         seatsRoom1.push({
           ViTriDay: r,
           ViTriCot: c,
+          DoRongCot: r === "E" ? 2 : 1,
+          SucChua: r === "E" ? 2 : 1,
           MaPhong: phong1.MaPhong,
           MaLoaiGhe: maLoaiGhe,
         });
         seatsRoom2.push({
           ViTriDay: r,
           ViTriCot: c,
+          DoRongCot: r === "E" ? 2 : 1,
+          SucChua: r === "E" ? 2 : 1,
           MaPhong: phong2.MaPhong,
           MaLoaiGhe: maLoaiGhe,
         });
@@ -598,12 +615,12 @@ async function main() {
           MaSuatChieu: sc.MaSuatChieu,
           MaGhe: g.MaGhe,
           TrangThai: TrangThaiGheSuatChieu.TRONG,
-          GiaVe: Number(item.giaVeGoc) + lpPhuThu + phuThuGhe,
+          GiaVe: (Number(item.giaVeGoc) + lpPhuThu) * g.SucChua + phuThuGhe,
         };
       });
 
       await prisma.gheSuatChieu.createMany({ data: gscData });
-      console.log(`✅ Đã tạo Suất chiếu cho phim ${createdMovies[item.movieIndex].TenPhim} & 25 Ghế suất chiếu`);
+      console.log(`✅ Đã tạo Suất chiếu cho phim ${createdMovies[item.movieIndex].TenPhim} & ${gscData.length} đơn vị ghế`);
     }
 
     const randomGsc = await prisma.gheSuatChieu.findFirst({

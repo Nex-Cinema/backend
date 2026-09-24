@@ -225,6 +225,8 @@ model Ghe {
   MaGhe       String    @id @default(uuid()) @db.VarChar(36)
   ViTriDay    String    @db.VarChar(10)
   ViTriCot    Int
+  DoRongCot   Int       @default(1)
+  SucChua     Int       @default(1)
   MaPhong     String    @db.VarChar(36)
   MaLoaiGhe   String    @db.VarChar(36)
   KhaDung     Boolean   @default(true)

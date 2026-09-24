@@ -1,6 +1,8 @@
 import prisma from '../config/prisma';
 import { holdSeats, cancelHeldSeats, releaseExpiredHolds } from '../repositories/ghesuatchieu.repository';
 import { BadRequestError, NotFoundError } from '../utils/errors';
+import { combineShowtimeDateTime } from '../utils/showtimeDateTime';
+import { calculateSeatPrice, formatSeatLabel } from '../utils/seatPricing';
 import {
   findCustomerByAccountId,
   findHeldSeatsForPayment,
@@ -34,9 +36,7 @@ export const giuGhe = async (
   }
 
   // Combine NgayChieu and GioChieu to get combined showtime start DateTime
-  const showtimeStart = new Date(sc.NgayChieu);
-  const gioChieu = new Date(sc.GioChieu);
-  showtimeStart.setHours(gioChieu.getHours(), gioChieu.getMinutes(), gioChieu.getSeconds());
+  const showtimeStart = combineShowtimeDateTime(sc.NgayChieu, sc.GioChieu);
 
   if (showtimeStart <= now) {
     throw new BadRequestError('Suất chiếu đã bắt đầu, không thể giữ ghế.');
@@ -129,7 +129,7 @@ export const huyGiuGhe = async (
 export const thanhToanGiaLap = async (
   maSuatChieu: string,
   seatIds: string[],
-  phuongThuc: 'VNPAY' | 'TIEN_MAT',
+  phuongThuc: 'TIEN_MAT',
   ketQua: 'THANH_CONG' | 'THAT_BAI',
   maTaiKhoan: string,
 ) => {
@@ -150,9 +150,7 @@ export const thanhToanGiaLap = async (
   // 3. Verify showtime has not started yet
   const firstSeat = heldSeats[0];
   const sc = firstSeat.SuatChieu;
-  const showtimeStart = new Date(sc.NgayChieu);
-  const gioChieu = new Date(sc.GioChieu);
-  showtimeStart.setHours(gioChieu.getHours(), gioChieu.getMinutes(), gioChieu.getSeconds());
+  const showtimeStart = combineShowtimeDateTime(sc.NgayChieu, sc.GioChieu);
 
   if (showtimeStart <= now) {
     throw new BadRequestError('Suất chiếu đã bắt đầu, không thể thực hiện thanh toán.');
@@ -165,12 +163,12 @@ export const thanhToanGiaLap = async (
     const roomSurcharge = Number(s.SuatChieu.PhongChieu.LoaiPhong.PhuThu);
     const daySurcharge = Number(s.SuatChieu.LoaiNgay.PhuThu);
     const seatSurcharge = Number(s.Ghe.LoaiGhe.PhuThu);
-    const price = basePrice + roomSurcharge + daySurcharge + seatSurcharge;
+    const price = calculateSeatPrice(basePrice, roomSurcharge, daySurcharge, seatSurcharge, s.Ghe.SucChua);
     totalAmount += price;
     return {
       maGheSuatChieu: s.MaGheSuatChieu,
       price,
-      tenGhe: `${s.Ghe.ViTriDay}${s.Ghe.ViTriCot}`,
+      tenGhe: formatSeatLabel(s.Ghe.ViTriDay, s.Ghe.ViTriCot, s.Ghe.DoRongCot),
     };
   });
 
@@ -247,9 +245,7 @@ export const thanhToan = async (
     // 3. Verify showtime has not started yet
     const firstSeat = heldSeats[0];
     const sc = firstSeat.SuatChieu;
-    const showtimeStart = new Date(sc.NgayChieu);
-    const gioChieu = new Date(sc.GioChieu);
-    showtimeStart.setHours(gioChieu.getHours(), gioChieu.getMinutes(), gioChieu.getSeconds());
+    const showtimeStart = combineShowtimeDateTime(sc.NgayChieu, sc.GioChieu);
 
     if (showtimeStart <= now) {
       throw new BadRequestError('Suất chiếu đã bắt đầu, không thể thực hiện thanh toán.');
@@ -262,12 +258,12 @@ export const thanhToan = async (
       const roomSurcharge = Number(s.SuatChieu.PhongChieu.LoaiPhong.PhuThu);
       const daySurcharge = Number(s.SuatChieu.LoaiNgay.PhuThu);
       const seatSurcharge = Number(s.Ghe.LoaiGhe.PhuThu);
-      const price = basePrice + roomSurcharge + daySurcharge + seatSurcharge;
+      const price = calculateSeatPrice(basePrice, roomSurcharge, daySurcharge, seatSurcharge, s.Ghe.SucChua);
       totalAmount += price;
       return {
         maGheSuatChieu: s.MaGheSuatChieu,
         price,
-        tenGhe: `${s.Ghe.ViTriDay}${s.Ghe.ViTriCot}`,
+        tenGhe: formatSeatLabel(s.Ghe.ViTriDay, s.Ghe.ViTriCot, s.Ghe.DoRongCot),
       };
     });
 
@@ -337,9 +333,7 @@ export const huyPhieuDatVe = async (
   }
 
   const now = new Date();
-  const showtimeStart = new Date(showtime.NgayChieu);
-  const gioChieu = new Date(showtime.GioChieu);
-  showtimeStart.setHours(gioChieu.getHours(), gioChieu.getMinutes(), gioChieu.getSeconds());
+  const showtimeStart = combineShowtimeDateTime(showtime.NgayChieu, showtime.GioChieu);
 
   if (showtimeStart <= now) {
     throw new BadRequestError('Suất chiếu của vé này đã bắt đầu hoặc đã diễn ra, không thể hủy.');

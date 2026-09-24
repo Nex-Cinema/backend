@@ -62,6 +62,25 @@ export const checkIsAisle = (rIndex: number, cIndex: number, CauTruc: string | n
   return false;
 };
 
+type CouplePlacement = 'start' | 'covered' | null;
+
+export const getCouplePlacement = (
+  row: number,
+  column: number,
+  structureValue: string | null,
+): CouplePlacement => {
+  if (!structureValue) return null;
+  try {
+    const structure = JSON.parse(structureValue);
+    const couples = Array.isArray(structure?.couples) ? structure.couples : [];
+    if (couples.some((item: { row: number; startCol: number }) => item.row === row && item.startCol === column)) return 'start';
+    if (couples.some((item: { row: number; startCol: number }) => item.row === row && item.startCol + 1 === column)) return 'covered';
+  } catch {
+    return null;
+  }
+  return null;
+};
+
 // ==========================================
 // Helper: Assert screening room exists
 // ==========================================
@@ -113,6 +132,7 @@ export const taoPhongChieu = async (input: CreatePhongChieuInput): Promise<Phong
   }
 
   const defaultMaLoaiGhe = defaultLoaiGhe.MaLoaiGhe;
+  const coupleLoaiGhe = await findLoaiGheByTen('Sweetbox');
 
   // 4. Create Room & Seats in a single transaction
   return prisma.$transaction(async (tx) => {
@@ -131,14 +151,21 @@ export const taoPhongChieu = async (input: CreatePhongChieuInput): Promise<Phong
     for (let r = 1; r <= soDo.SoHang; r++) {
       const rowLetter = getRowLetter(r);
       for (let c = 1; c <= soDo.SoCot; c++) {
+        const couplePlacement = getCouplePlacement(r, c, soDo.CauTruc);
+        if (couplePlacement === 'covered') continue;
         if (checkIsAisle(r - 1, c - 1, soDo.CauTruc)) {
           continue;
+        }
+        if (couplePlacement === 'start' && !coupleLoaiGhe) {
+          throw new BadRequestError('Sơ đồ có ghế đôi nhưng hệ thống chưa cấu hình loại ghế Sweetbox');
         }
         seatsToCreate.push({
           ViTriDay: rowLetter,
           ViTriCot: c,
           MaPhong: newRoom.MaPhong,
-          MaLoaiGhe: defaultMaLoaiGhe,
+          MaLoaiGhe: couplePlacement === 'start' ? coupleLoaiGhe!.MaLoaiGhe : defaultMaLoaiGhe,
+          DoRongCot: couplePlacement === 'start' ? 2 : 1,
+          SucChua: couplePlacement === 'start' ? 2 : 1,
           KhaDung: true,
         });
       }
@@ -215,6 +242,7 @@ export const capNhatPhongChieu = async (
     }
 
     const defaultMaLoaiGhe = defaultLoaiGhe.MaLoaiGhe;
+    const coupleLoaiGhe = await findLoaiGheByTen('Sweetbox');
 
     return prisma.$transaction(async (tx) => {
       // Delete old seats
@@ -238,14 +266,21 @@ export const capNhatPhongChieu = async (
       for (let r = 1; r <= newSoDo.SoHang; r++) {
         const rowLetter = getRowLetter(r);
         for (let c = 1; c <= newSoDo.SoCot; c++) {
+          const couplePlacement = getCouplePlacement(r, c, newSoDo.CauTruc);
+          if (couplePlacement === 'covered') continue;
           if (checkIsAisle(r - 1, c - 1, newSoDo.CauTruc)) {
             continue;
+          }
+          if (couplePlacement === 'start' && !coupleLoaiGhe) {
+            throw new BadRequestError('Sơ đồ có ghế đôi nhưng hệ thống chưa cấu hình loại ghế Sweetbox');
           }
           seatsToCreate.push({
             ViTriDay: rowLetter,
             ViTriCot: c,
             MaPhong: maPhong,
-            MaLoaiGhe: defaultMaLoaiGhe,
+            MaLoaiGhe: couplePlacement === 'start' ? coupleLoaiGhe!.MaLoaiGhe : defaultMaLoaiGhe,
+            DoRongCot: couplePlacement === 'start' ? 2 : 1,
+            SucChua: couplePlacement === 'start' ? 2 : 1,
             KhaDung: true,
           });
         }
@@ -360,6 +395,18 @@ export const capNhatCauHinhGhe = async (maPhong: string, input: UpdateGhesInput)
       });
       if (!seatType) {
         throw new NotFoundError(`Không tìm thấy loại ghế với mã: ${item.maLoaiGhe}`);
+      }
+
+      const isCoupleSeatType = seatType.TenLoaiGhe.toLowerCase() === 'sweetbox';
+      if (seat.DoRongCot > 1 && !isCoupleSeatType) {
+        throw new BadRequestError(
+          `Ghế ${seat.ViTriDay}${seat.ViTriCot} chiếm ${seat.DoRongCot} cột và phải giữ loại Sweetbox.`,
+        );
+      }
+      if (seat.DoRongCot === 1 && isCoupleSeatType) {
+        throw new BadRequestError(
+          `Ghế ${seat.ViTriDay}${seat.ViTriCot} chỉ chiếm 1 cột. Hãy khai báo ghế đôi trong cấu trúc sơ đồ trước.`,
+        );
       }
 
       // Update seat configuration

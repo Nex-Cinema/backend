@@ -55,7 +55,7 @@ router.post(
 
 /**
  * @route   POST /api/v1/dat-ve/thanh-toan
- * @desc    Thanh toán đặt vé (chuẩn bị tích hợp VNPAY)
+ * @desc    Thanh toán đặt vé
  * @access  Private - CUSTOMER only
  */
 router.post(

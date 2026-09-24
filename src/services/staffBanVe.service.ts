@@ -10,6 +10,7 @@ import {
 } from '../repositories/staffBanVe.repository';
 import { UnauthorizedError, NotFoundError, BadRequestError } from '../utils/errors';
 import { StaffSellTicketInput } from '../validators/staffBanVe.validator';
+import { calculateSeatPrice, formatSeatLabel } from '../utils/seatPricing';
 
 export interface StaffShowtimeResponse {
   MaSuatChieu: string;
@@ -195,7 +196,7 @@ export const getSeatMapForStaff = async (
   // Map seats
   const seats = sc.GheSuatChieus.map((gsc) => {
     const seatSurcharge = Number(gsc.Ghe.LoaiGhe.PhuThu);
-    const calculatedPrice = basePrice + roomSurcharge + daySurcharge + seatSurcharge;
+    const calculatedPrice = calculateSeatPrice(basePrice, roomSurcharge, daySurcharge, seatSurcharge, gsc.Ghe.SucChua);
 
     // Check if hold is expired in-memory (redundancy check)
     const isExpired = gsc.TrangThai === 'DANG_GIU' && gsc.ThoiGianGiuGhe && new Date(gsc.ThoiGianGiuGhe) < now;
@@ -204,11 +205,13 @@ export const getSeatMapForStaff = async (
     return {
       MaGheSuatChieu: gsc.MaGheSuatChieu,
       MaGhe: gsc.MaGhe,
-      TenGhe: `${gsc.Ghe.ViTriDay}${gsc.Ghe.ViTriCot}`,
+      TenGhe: formatSeatLabel(gsc.Ghe.ViTriDay, gsc.Ghe.ViTriCot, gsc.Ghe.DoRongCot),
       LoaiGhe: gsc.Ghe.MaLoaiGhe,
       SoThuTu: gsc.Ghe.ViTriCot,
       TenLoaiGhe: gsc.Ghe.LoaiGhe.TenLoaiGhe,
       GiaPhuThuLoaiGhe: seatSurcharge,
+      DoRongCot: gsc.Ghe.DoRongCot,
+      SucChua: gsc.Ghe.SucChua,
       TrangThai: finalStatus,
       GiaVeTinhToan: calculatedPrice,
     };
@@ -320,7 +323,7 @@ export const sellTicketsAtCounter = async (
   let totalAmount = 0;
   const calculatedPrices = seats.map((s) => {
     const seatSurcharge = Number(s.Ghe.LoaiGhe.PhuThu);
-    const price = basePrice + roomSurcharge + daySurcharge + seatSurcharge;
+    const price = calculateSeatPrice(basePrice, roomSurcharge, daySurcharge, seatSurcharge, s.Ghe.SucChua);
     totalAmount += price;
     return {
       seatId: s.MaGheSuatChieu,

@@ -383,7 +383,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -412,7 +412,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -434,7 +434,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
 
       // Verify GiaoDich
       expect(dbBooking?.GiaoDichs).toHaveLength(1);
-      expect(dbBooking?.GiaoDichs[0].PhuongThuc).toBe('VNPAY');
+      expect(dbBooking?.GiaoDichs[0].PhuongThuc).toBe('TIEN_MAT');
       expect(dbBooking?.GiaoDichs[0].TrangThai).toBe('THANH_CONG');
       expect(Number(dbBooking?.GiaoDichs[0].SoTien)).toBe(105000);
     });
@@ -456,7 +456,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -486,7 +486,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -512,7 +512,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -557,7 +557,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -601,7 +601,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu, seat2.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -627,7 +627,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THAT_BAI',
         });
 
@@ -666,7 +666,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -710,7 +710,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -757,7 +757,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -797,7 +797,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -832,7 +832,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 

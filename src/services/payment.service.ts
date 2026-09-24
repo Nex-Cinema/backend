@@ -3,9 +3,14 @@ import { payOS } from '../utils/payos.util';
 import { env } from '../config/env';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { findCustomerByAccountId } from '../repositories/datve.repository';
-import { generateVNPaySecureHash, verifyVNPaySignature, sortObject, stringifyVNPayParams, normalizeIp } from '../utils/vnpay.util';
-import qs from 'qs';
 import { assertPaymentGatewayAvailable } from './paymentGateway.service';
+import {
+  generateVNPaySecureHash,
+  normalizeIp,
+  sortVNPayParams,
+  stringifyVNPayParams,
+  verifyVNPaySignature,
+} from '../utils/vnpay.util';
 
 /**
  * Creates a PayOS payment link for a pending booking.
@@ -379,27 +384,25 @@ export const checkPaymentStatus = async (maGiaoDich: string, maTaiKhoan: string)
   };
 };
 
-/**
- * Helper to format Date to yyyyMMddHHmmss
- */
-function formatVNPayDate(date: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const yyyy = date.getFullYear();
-  const MM = pad(date.getMonth() + 1);
-  const dd = pad(date.getDate());
-  const HH = pad(date.getHours());
-  const mm = pad(date.getMinutes());
-  const ss = pad(date.getSeconds());
-  return `${yyyy}${MM}${dd}${HH}${mm}${ss}`;
-}
+const formatVNPayDate = (date: Date): string => {
+  const pad = (value: number) => value.toString().padStart(2, '0');
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join('');
+};
 
 /**
- * Creates a VNPay payment link for a pending booking.
+ * Creates a signed VNPay Sandbox payment URL for a pending booking.
  */
 export const createVnpayLink = async (
   maPhieuDat: string,
   maTaiKhoan: string,
-  clientIp: string
+  clientIp: string,
 ) => {
   await assertPaymentGatewayAvailable('VNPAY');
   const customer = await findCustomerByAccountId(maTaiKhoan);
@@ -407,7 +410,6 @@ export const createVnpayLink = async (
     throw new BadRequestError('Tài khoản không phải là khách hàng hợp lệ.');
   }
 
-  // 1. Find the pending booking
   const booking = await prisma.phieuDatVe.findFirst({
     where: {
       MaPhieuDat: maPhieuDat,
@@ -415,39 +417,28 @@ export const createVnpayLink = async (
       KhaDung: true,
     },
     include: {
-      ChiTietDatVes: {
-        include: {
-          GheSuatChieu: true,
-        },
-      },
+      ChiTietDatVes: { include: { GheSuatChieu: true } },
     },
   });
 
   if (!booking) {
     throw new NotFoundError(`Không tìm thấy phiếu đặt vé với mã: ${maPhieuDat}`);
   }
-
   if (booking.TrangThai !== 'CHO_THANH_TOAN') {
     throw new BadRequestError(`Phiếu đặt vé không ở trạng thái chờ thanh toán (Trạng thái hiện tại: ${booking.TrangThai})`);
   }
 
-  // 2. Verify seats are still held by the user and not expired
   const now = new Date();
-  const isHeld = booking.ChiTietDatVes.every((ct) => {
-    const seat = ct.GheSuatChieu;
-    return (
-      seat.TrangThai === 'DANG_GIU' &&
-      seat.MaTaiKhoanGiu === maTaiKhoan &&
-      seat.ThoiGianGiuGhe &&
-      seat.ThoiGianGiuGhe >= now
-    );
-  });
-
-  if (!isHeld) {
-    throw new BadRequestError('Một số ghế trong phiếu đặt vé của bạn đã hết hạn giữ hoặc không thuộc sở hữu của bạn.');
+  const seatsAreHeld = booking.ChiTietDatVes.every(({ GheSuatChieu }) => (
+    GheSuatChieu.TrangThai === 'DANG_GIU'
+    && GheSuatChieu.MaTaiKhoanGiu === maTaiKhoan
+    && Boolean(GheSuatChieu.ThoiGianGiuGhe)
+    && GheSuatChieu.ThoiGianGiuGhe! >= now
+  ));
+  if (!seatsAreHeld) {
+    throw new BadRequestError('Một số ghế đã hết hạn giữ hoặc không thuộc sở hữu của bạn.');
   }
 
-  // 3. Find the pending transaction
   const transaction = await prisma.giaoDich.findFirst({
     where: {
       MaPhieuDat: maPhieuDat,
@@ -456,203 +447,128 @@ export const createVnpayLink = async (
       KhaDung: true,
     },
   });
-
   if (!transaction) {
-    throw new NotFoundError('Không tìm thấy giao dịch chờ xử lý với phương thức VNPAY cho phiếu đặt vé này.');
+    throw new NotFoundError('Không tìm thấy giao dịch VNPay đang chờ xử lý.');
   }
 
-  const amount = Number(booking.TongTien);
-
-  // 4. Update the external transaction ID (MaGiaoDichNgoai) to be the transaction UUID (MaGiaoDich)
-  const vnpTxnRef = transaction.MaGiaoDich;
+  const transactionReference = transaction.MaGiaoDich;
   await prisma.giaoDich.update({
     where: { MaGiaoDich: transaction.MaGiaoDich },
-    data: {
-      MaGiaoDichNgoai: vnpTxnRef,
-    },
+    data: { MaGiaoDichNgoai: transactionReference },
   });
 
-  // 5. Build VNPay request parameters
-  const createDate = formatVNPayDate(new Date());
-  
-  const vnpParams: Record<string, string> = {
+  const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+  const vnpayParams: Record<string, string> = {
     vnp_Version: '2.1.0',
     vnp_Command: 'pay',
     vnp_TmnCode: env.VNPAY_TMN_CODE,
-    vnp_Amount: Math.round(amount * 100).toString(),
-    vnp_CreateDate: createDate,
+    vnp_Amount: Math.round(Number(booking.TongTien) * 100).toString(),
+    vnp_CreateDate: formatVNPayDate(now),
+    vnp_ExpireDate: formatVNPayDate(expiresAt),
     vnp_CurrCode: 'VND',
     vnp_IpAddr: normalizeIp(clientIp),
     vnp_Locale: 'vn',
     vnp_OrderInfo: `Thanh toan phieu dat ve ${maPhieuDat}`.substring(0, 100),
-    vnp_OrderType: 'billpayment',
-    vnp_ReturnUrl: env.VNPAY_CALLBACK_URL || `${env.BACKEND_PUBLIC_URL}${env.API_PREFIX}/payment/vnpay/return`,
-    vnp_TxnRef: vnpTxnRef,
+    vnp_OrderType: 'other',
+    vnp_ReturnUrl: env.VNPAY_CALLBACK_URL
+      || `${env.BACKEND_PUBLIC_URL}${env.API_PREFIX}/payment/vnpay/return`,
+    vnp_TxnRef: transactionReference,
   };
-
-  // 6. Generate the secure hash and payment URL
-  const sortedParams = sortObject(vnpParams);
-  const signData = qs.stringify(sortedParams, { encode: false });
-  const secureHash = generateVNPaySecureHash(vnpParams, env.VNPAY_HASH_SECRET);
-  
-  // Append vnp_SecureHash to sortedParams
-  (sortedParams as any).vnp_SecureHash = secureHash;
-  
-  const paymentUrl = `${env.VNPAY_PAYMENT_URL}?${qs.stringify(sortedParams, { encode: false })}`;
-
-  // Print debug values as requested
-  console.log("SIGN DATA:", signData);
-  console.log("PAYMENT URL:", paymentUrl);
+  const sortedParams = sortVNPayParams(vnpayParams);
+  sortedParams.vnp_SecureHash = generateVNPaySecureHash(vnpayParams, env.VNPAY_HASH_SECRET);
 
   return {
-    paymentUrl,
+    paymentUrl: `${env.VNPAY_PAYMENT_URL}?${stringifyVNPayParams(sortedParams)}`,
     maGiaoDich: transaction.MaGiaoDich,
-    maPhieuDat: maPhieuDat,
-    amount,
-    vnpTxnRef,
+    maPhieuDat,
+    amount: Number(booking.TongTien),
+    expiresAt,
   };
 };
 
 /**
- * Handles IPN callbacks from VNPay.
+ * Applies an authenticated VNPay IPN notification exactly once.
  */
-export const handleVnpayIpn = async (queryParams: any) => {
-  // 1. Verify secure hash
-  const isValidSignature = verifyVNPaySignature(queryParams, env.VNPAY_HASH_SECRET);
-  if (!isValidSignature) {
+export const handleVnpayIpn = async (queryParams: Record<string, unknown>) => {
+  if (!verifyVNPaySignature(queryParams, env.VNPAY_HASH_SECRET)) {
     return { RspCode: '97', Message: 'Invalid signature' };
   }
 
-  const vnp_TxnRef = queryParams.vnp_TxnRef;
-  const vnp_Amount = queryParams.vnp_Amount;
-  const vnp_ResponseCode = queryParams.vnp_ResponseCode;
-  const vnp_TransactionStatus = queryParams.vnp_TransactionStatus;
-
-  if (!vnp_TxnRef) {
+  const transactionReference = typeof queryParams.vnp_TxnRef === 'string'
+    ? queryParams.vnp_TxnRef
+    : '';
+  const receivedAmount = typeof queryParams.vnp_Amount === 'string'
+    ? Number(queryParams.vnp_Amount)
+    : Number.NaN;
+  if (!transactionReference || !Number.isFinite(receivedAmount)) {
     return { RspCode: '99', Message: 'Input required data missing' };
   }
 
-  // 2. Find transaction
   const transaction = await prisma.giaoDich.findFirst({
     where: {
       OR: [
-        { MaGiaoDich: vnp_TxnRef },
-        { MaGiaoDichNgoai: vnp_TxnRef },
+        { MaGiaoDich: transactionReference },
+        { MaGiaoDichNgoai: transactionReference },
       ],
       PhuongThuc: 'VNPAY',
       KhaDung: true,
     },
     include: {
-      PhieuDatVe: {
-        include: {
-          ChiTietDatVes: true,
-        },
-      },
+      PhieuDatVe: { include: { ChiTietDatVes: true } },
     },
   });
+  if (!transaction) return { RspCode: '01', Message: 'Order not found' };
 
-  if (!transaction) {
-    return { RspCode: '01', Message: 'Order not found' };
-  }
-
-  // 3. Verify amount
-  // vnp_Amount is multiplied by 100 from actual currency
-  const expectedAmountCent = Math.round(Number(transaction.SoTien) * 100);
-  if (Math.round(Number(vnp_Amount)) !== expectedAmountCent) {
+  const expectedAmount = Math.round(Number(transaction.SoTien) * 100);
+  if (Math.round(receivedAmount) !== expectedAmount) {
     return { RspCode: '04', Message: 'Invalid amount' };
   }
-
-  // 4. Check if transaction has already been processed
   if (transaction.TrangThai !== 'CHO_XU_LY') {
     return { RspCode: '02', Message: 'Order already confirmed' };
   }
 
-  // 5. Update status in database transaction
-  const isSuccess = vnp_ResponseCode === '00' && vnp_TransactionStatus === '00';
+  const isSuccess = queryParams.vnp_ResponseCode === '00'
+    && queryParams.vnp_TransactionStatus === '00';
+  const seatIds = transaction.PhieuDatVe.ChiTietDatVes.map((item) => item.MaGheSuatChieu);
 
-  if (isSuccess) {
-    await prisma.$transaction(async (tx) => {
-      // Re-verify inside tx
-      const currentTx = await tx.giaoDich.findUnique({
-        where: { MaGiaoDich: transaction.MaGiaoDich },
-      });
-      if (!currentTx || currentTx.TrangThai !== 'CHO_XU_LY') return;
-
-      // Update transaction status
-      await tx.giaoDich.update({
-        where: { MaGiaoDich: transaction.MaGiaoDich },
-        data: {
-          TrangThai: 'THANH_CONG',
-          NgayGiaoDich: new Date(),
-        },
-      });
-
-      // Update booking status
-      await tx.phieuDatVe.update({
-        where: { MaPhieuDat: transaction.MaPhieuDat },
-        data: { TrangThai: 'DA_THANH_TOAN' },
-      });
-
-      // Convert seats to DA_DAT
-      const seatIds = transaction.PhieuDatVe.ChiTietDatVes.map((ct) => ct.MaGheSuatChieu);
-      await tx.gheSuatChieu.updateMany({
-        where: { MaGheSuatChieu: { in: seatIds } },
-        data: {
-          TrangThai: 'DA_DAT',
-          ThoiGianGiuGhe: null,
-          MaTaiKhoanGiu: null,
-        },
-      });
+  await prisma.$transaction(async (tx) => {
+    const currentTransaction = await tx.giaoDich.findUnique({
+      where: { MaGiaoDich: transaction.MaGiaoDich },
     });
-  } else {
-    await prisma.$transaction(async (tx) => {
-      // Re-verify inside tx
-      const currentTx = await tx.giaoDich.findUnique({
-        where: { MaGiaoDich: transaction.MaGiaoDich },
-      });
-      if (!currentTx || currentTx.TrangThai !== 'CHO_XU_LY') return;
+    if (!currentTransaction || currentTransaction.TrangThai !== 'CHO_XU_LY') return;
 
-      // Update transaction status
-      await tx.giaoDich.update({
-        where: { MaGiaoDich: transaction.MaGiaoDich },
-        data: { TrangThai: 'THAT_BAI' },
-      });
-
-      // Update booking status
-      await tx.phieuDatVe.update({
-        where: { MaPhieuDat: transaction.MaPhieuDat },
-        data: { TrangThai: 'DA_HUY' },
-      });
-
-      // Release seats back to TRONG only if they are still held (not DA_DAT)
-      const seatIds = transaction.PhieuDatVe.ChiTietDatVes.map((ct) => ct.MaGheSuatChieu);
-      await tx.gheSuatChieu.updateMany({
-        where: {
-          MaGheSuatChieu: { in: seatIds },
-          TrangThai: 'DANG_GIU',
-        },
-        data: {
-          TrangThai: 'TRONG',
-          ThoiGianGiuGhe: null,
-          MaTaiKhoanGiu: null,
-        },
-      });
+    await tx.giaoDich.update({
+      where: { MaGiaoDich: transaction.MaGiaoDich },
+      data: {
+        TrangThai: isSuccess ? 'THANH_CONG' : 'THAT_BAI',
+        NgayGiaoDich: isSuccess ? new Date() : transaction.NgayGiaoDich,
+      },
     });
-  }
+    await tx.phieuDatVe.update({
+      where: { MaPhieuDat: transaction.MaPhieuDat },
+      data: { TrangThai: isSuccess ? 'DA_THANH_TOAN' : 'DA_HUY' },
+    });
+    await tx.gheSuatChieu.updateMany({
+      where: isSuccess
+        ? { MaGheSuatChieu: { in: seatIds } }
+        : { MaGheSuatChieu: { in: seatIds }, TrangThai: 'DANG_GIU' },
+      data: {
+        TrangThai: isSuccess ? 'DA_DAT' : 'TRONG',
+        ThoiGianGiuGhe: null,
+        MaTaiKhoanGiu: null,
+      },
+    });
+  });
 
   return { RspCode: '00', Message: 'Confirm Success' };
 };
 
-/**
- * Checks transaction status of a VNPay transaction in our DB.
- */
 export const checkVnpayStatus = async (maGiaoDich: string, maTaiKhoan: string) => {
   const customer = await findCustomerByAccountId(maTaiKhoan);
   if (!customer) {
     throw new BadRequestError('Tài khoản không phải là khách hàng hợp lệ.');
   }
 
-  // Find transaction
   const transaction = await prisma.giaoDich.findFirst({
     where: {
       OR: [
@@ -663,20 +579,9 @@ export const checkVnpayStatus = async (maGiaoDich: string, maTaiKhoan: string) =
       PhuongThuc: 'VNPAY',
       KhaDung: true,
     },
-    include: {
-      PhieuDatVe: {
-        include: {
-          KhachHang: true,
-        },
-      },
-    },
+    include: { PhieuDatVe: { include: { KhachHang: true } } },
   });
-
-  if (!transaction) {
-    throw new NotFoundError('Không tìm thấy giao dịch.');
-  }
-
-  // Verify only customer owner can query
+  if (!transaction) throw new NotFoundError('Không tìm thấy giao dịch VNPay.');
   if (transaction.PhieuDatVe.KhachHang?.MaTaiKhoan !== maTaiKhoan) {
     throw new BadRequestError('Bạn không có quyền xem thông tin giao dịch này.');
   }
@@ -687,6 +592,5 @@ export const checkVnpayStatus = async (maGiaoDich: string, maTaiKhoan: string) =
     amount: Number(transaction.SoTien),
     maGiaoDich: transaction.MaGiaoDich,
     maPhieuDat: transaction.MaPhieuDat,
-    vnpTxnRef: transaction.MaGiaoDichNgoai || transaction.MaGiaoDich,
   };
 };

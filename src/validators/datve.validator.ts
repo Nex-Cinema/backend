@@ -45,9 +45,9 @@ export const paymentSimulationSchema = z.object({
       message: 'Danh sách mã ghế không được chứa giá trị trùng lặp',
     }),
 
-  PhuongThucThanhToan: z.enum(['VNPAY', 'TIEN_MAT'], {
+  PhuongThucThanhToan: z.literal('TIEN_MAT', {
     required_error: 'Phương thức thanh toán là bắt buộc',
-    invalid_type_error: 'Phương thức thanh toán phải là VNPAY hoặc TIEN_MAT',
+    invalid_type_error: 'Phương thức thanh toán giả lập phải là TIEN_MAT',
   }),
 
   KetQuaThanhToan: z.enum(['THANH_CONG', 'THAT_BAI'], {

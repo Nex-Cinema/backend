@@ -60,53 +60,63 @@ export const payosWebhook = asyncHandler(async (req: Request, res: Response) => 
  */
 export const createVnpayPayment = asyncHandler(async (req: Request, res: Response) => {
   const { MaPhieuDat } = req.body as { MaPhieuDat?: string };
-  
   if (!MaPhieuDat) {
     throw new BadRequestError('Mã phiếu đặt (MaPhieuDat) là bắt buộc trong request body.');
   }
 
-  const maTaiKhoan = req.user!.maTaiKhoan;
-  
-  // Extract client IP address
-  const clientIp = 
-    (req.headers['x-forwarded-for'] as string) || 
-    req.socket.remoteAddress || 
-    '127.0.0.1';
+  const forwardedIp = req.headers['x-forwarded-for'];
+  const clientIp = (Array.isArray(forwardedIp) ? forwardedIp[0] : forwardedIp)
+    || req.socket.remoteAddress
+    || '127.0.0.1';
+  const result = await paymentService.createVnpayLink(
+    MaPhieuDat,
+    req.user!.maTaiKhoan,
+    clientIp,
+  );
 
-  const finalIp = clientIp.split(',')[0].trim();
-
-  const result = await paymentService.createVnpayLink(MaPhieuDat, maTaiKhoan, finalIp);
-
-  return sendSuccess(res, 'Tạo link thanh toán VNPay thành công', result);
+  return sendSuccess(res, 'Tạo URL thanh toán VNPay Sandbox thành công', result);
 });
 
 /**
  * GET /api/v1/payment/vnpay/return
- * Auth: None (browser redirect from VNPay)
+ * Auth: None (browser redirect)
+ *
+ * Production keeps IPN as the source of truth. Local sandbox development may
+ * explicitly enable signed-return confirmation because VNPay cannot call a
+ * localhost IPN URL. The same signature, amount and idempotency checks used by
+ * the IPN handler still apply.
  */
 export const vnpayReturn = asyncHandler(async (req: Request, res: Response) => {
-  const queryParams = req.query;
-  const vnp_TxnRef = queryParams.vnp_TxnRef as string;
-  const vnp_ResponseCode = queryParams.vnp_ResponseCode as string;
+  const queryParams = req.query as Record<string, unknown>;
+  const transactionReference = typeof queryParams.vnp_TxnRef === 'string'
+    ? queryParams.vnp_TxnRef
+    : '';
+  const responseCode = typeof queryParams.vnp_ResponseCode === 'string'
+    ? queryParams.vnp_ResponseCode
+    : '';
+  const signatureValid = verifyVNPaySignature(queryParams, env.VNPAY_HASH_SECRET);
+  let returnStatus = signatureValid && responseCode === '00' ? 'processing' : 'failed';
 
-  const isValidSignature = verifyVNPaySignature(queryParams, env.VNPAY_HASH_SECRET);
-
-  let redirectStatus = 'failed';
-  if (isValidSignature && vnp_ResponseCode === '00') {
-    redirectStatus = 'success';
+  if (signatureValid && env.VNPAY_ALLOW_SIGNED_RETURN_CONFIRMATION) {
+    const confirmation = await paymentService.handleVnpayIpn(queryParams);
+    returnStatus = confirmation.RspCode === '00' ? 'success' : 'failed';
   }
 
-  const frontendReturnUrl = env.VNPAY_FRONTEND_RETURN_URL || `${env.FRONTEND_URL}/payment/vnpay-return`;
-  const redirectUrl = `${frontendReturnUrl}?maGiaoDich=${vnp_TxnRef || ''}&status=${redirectStatus}`;
-  return res.redirect(redirectUrl);
+  const frontendReturnUrl = env.VNPAY_FRONTEND_RETURN_URL
+    || `${env.FRONTEND_URL}/payment/vnpay-return`;
+  const redirectUrl = new URL(frontendReturnUrl);
+  redirectUrl.searchParams.set('maGiaoDich', transactionReference);
+  redirectUrl.searchParams.set('status', returnStatus);
+
+  return res.redirect(redirectUrl.toString());
 });
 
 /**
  * GET /api/v1/payment/vnpay/ipn
- * Auth: None (IPN webhook)
+ * Auth: None (VNPay signature verified in service)
  */
 export const vnpayIpn = asyncHandler(async (req: Request, res: Response) => {
-  const result = await paymentService.handleVnpayIpn(req.query);
+  const result = await paymentService.handleVnpayIpn(req.query as Record<string, unknown>);
   return res.status(200).json(result);
 });
 
@@ -116,13 +126,10 @@ export const vnpayIpn = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getVnpayStatus = asyncHandler(async (req: Request, res: Response) => {
   const { maGiaoDich } = req.params as { maGiaoDich?: string };
-
   if (!maGiaoDich) {
     throw new BadRequestError('Mã giao dịch (maGiaoDich) là bắt buộc trong URL path.');
   }
 
-  const maTaiKhoan = req.user!.maTaiKhoan;
-  const result = await paymentService.checkVnpayStatus(maGiaoDich, maTaiKhoan);
-
+  const result = await paymentService.checkVnpayStatus(maGiaoDich, req.user!.maTaiKhoan);
   return sendSuccess(res, 'Lấy trạng thái thanh toán VNPay thành công', result);
 });

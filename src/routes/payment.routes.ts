@@ -45,7 +45,7 @@ router.post(
 
 /**
  * @route   POST /api/v1/payment/vnpay/create
- * @desc    Tạo link thanh toán VNPay cho phiếu đặt vé
+ * @desc    Tạo URL thanh toán VNPay Sandbox cho phiếu đặt vé
  * @access  Private - CUSTOMER only
  */
 router.post(
@@ -57,28 +57,22 @@ router.post(
 
 /**
  * @route   GET /api/v1/payment/vnpay/return
- * @desc    VNPay redirect sau khi thanh toán xong
- * @access  Public
+ * @desc    Nhận browser redirect từ VNPay rồi chuyển về frontend
+ * @access  Public (signature verification)
  */
-router.get(
-  '/vnpay/return',
-  paymentController.vnpayReturn,
-);
+router.get('/vnpay/return', paymentController.vnpayReturn);
 
 /**
  * @route   GET /api/v1/payment/vnpay/ipn
- * @desc    IPN webhook từ VNPay để cập nhật trạng thái thanh toán
- * @access  Public (Signature verification checks integrity)
+ * @desc    Nhận IPN server-to-server từ VNPay
+ * @access  Public (signature verification)
  */
-router.get(
-  '/vnpay/ipn',
-  paymentController.vnpayIpn,
-);
+router.get('/vnpay/ipn', paymentController.vnpayIpn);
 
 /**
  * @route   GET /api/v1/payment/vnpay/:maGiaoDich/status
- * @desc    Kiểm tra trạng thái thanh toán VNPay trong hệ thống
- * @access  Private - CUSTOMER only
+ * @desc    Kiểm tra trạng thái giao dịch VNPay trong hệ thống
+ * @access  Private - CUSTOMER owner only
  */
 router.get(
   '/vnpay/:maGiaoDich/status',

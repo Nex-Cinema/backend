@@ -11,21 +11,13 @@ import {
 import { releaseExpiredHolds } from '../repositories/ghesuatchieu.repository';
 import { CreateSuatChieuInput, UpdateSuatChieuInput } from '../validators/suatchieu.validator';
 import { BadRequestError, NotFoundError } from '../utils/errors';
+import { combineShowtimeDateTime } from '../utils/showtimeDateTime';
+import { calculateSeatPrice, formatSeatLabel } from '../utils/seatPricing';
 
 /**
  * Helper to combine NgayChieu (Date part) and GioChieu (Time part) in UTC
  */
-export const getCombinedDateTime = (ngayChieu: Date, gioChieu: Date): Date => {
-  const year = ngayChieu.getUTCFullYear();
-  const month = ngayChieu.getUTCMonth();
-  const date = ngayChieu.getUTCDate();
-
-  const hours = gioChieu.getUTCHours();
-  const minutes = gioChieu.getUTCMinutes();
-  const seconds = gioChieu.getUTCSeconds();
-
-  return new Date(Date.UTC(year, month, date, hours, minutes, seconds));
-};
+export const getCombinedDateTime = combineShowtimeDateTime;
 
 /**
  * Check if a showtime conflicts with other showtimes in the same room
@@ -146,7 +138,7 @@ export const createSuatChieuService = async (input: CreateSuatChieuInput): Promi
 
     const gheSuatChieuData = activeSeats.map((seat) => {
       const phuThuGhe = Number(seat.LoaiGhe.PhuThu);
-      const ticketPrice = basePrice + phuThuPhong + phuThuGhe + phuThuNgay;
+      const ticketPrice = calculateSeatPrice(basePrice, phuThuPhong, phuThuNgay, phuThuGhe, seat.SucChua);
 
       return {
         MaSuatChieu: newSc.MaSuatChieu,
@@ -272,7 +264,7 @@ export const updateSuatChieuService = async (
 
       const gheSuatChieuData = activeSeats.map((seat) => {
         const phuThuGhe = Number(seat.LoaiGhe.PhuThu);
-        const ticketPrice = basePrice + phuThuPhong + phuThuGhe + phuThuNgay;
+        const ticketPrice = calculateSeatPrice(basePrice, phuThuPhong, phuThuNgay, phuThuGhe, seat.SucChua);
 
         return {
           MaSuatChieu: maSuatChieu,
@@ -309,7 +301,7 @@ export const updateSuatChieuService = async (
 
       for (const seat of seats) {
         const phuThuGhe = Number(seat.Ghe.LoaiGhe.PhuThu);
-        const newPrice = basePrice + phuThuPhong + phuThuGhe + phuThuNgay;
+        const newPrice = calculateSeatPrice(basePrice, phuThuPhong, phuThuNgay, phuThuGhe, seat.Ghe.SucChua);
 
         await tx.gheSuatChieu.update({
           where: { MaGheSuatChieu: seat.MaGheSuatChieu },
@@ -394,7 +386,7 @@ export const getSeatMap = async (maSuatChieu: string) => {
   // 4. Map Ghes list
   const ghes = sc.GheSuatChieus.map((gsc) => {
     const seatSurcharge = Number(gsc.Ghe.LoaiGhe.PhuThu);
-    const calculatedPrice = basePrice + roomSurcharge + daySurcharge + seatSurcharge;
+    const calculatedPrice = calculateSeatPrice(basePrice, roomSurcharge, daySurcharge, seatSurcharge, gsc.Ghe.SucChua);
 
     // Check if the hold is expired in-memory (redundancy fallback)
     const isExpired = gsc.TrangThai === 'DANG_GIU' && gsc.ThoiGianGiuGhe && new Date(gsc.ThoiGianGiuGhe) < now;
@@ -404,9 +396,11 @@ export const getSeatMap = async (maSuatChieu: string) => {
     return {
       MaGheSuatChieu: gsc.MaGheSuatChieu,
       MaGhe: gsc.MaGhe,
-      TenGhe: `${gsc.Ghe.ViTriDay}${gsc.Ghe.ViTriCot}`,
+      TenGhe: formatSeatLabel(gsc.Ghe.ViTriDay, gsc.Ghe.ViTriCot, gsc.Ghe.DoRongCot),
       LoaiGhe: gsc.Ghe.MaLoaiGhe,
       SoThuTu: gsc.Ghe.ViTriCot,
+      DoRongCot: gsc.Ghe.DoRongCot,
+      SucChua: gsc.Ghe.SucChua,
       TenLoaiGhe: gsc.Ghe.LoaiGhe.TenLoaiGhe,
       GiaPhuThuLoaiGhe: seatSurcharge,
       TrangThai: finalStatus,

@@ -140,7 +140,7 @@ async function main() {
     maSuatChieu: string,
     seatCount: number,
     customerTK: any,
-    phuongThuc: PhuongThucThanhToan = "VNPAY",
+    phuongThuc: PhuongThucThanhToan = "PAYOS",
     ngayDat?: Date,
     isStaffSale: boolean = false,
   ) {
@@ -313,7 +313,7 @@ async function main() {
 
   // Helper to get a random customer
   const getRandomCustomer = () => allCustomers[Math.floor(Math.random() * allCustomers.length)];
-  const paymentMethods: PhuongThucThanhToan[] = ["VNPAY", "TIEN_MAT", "VNPAY", "VNPAY", "TIEN_MAT"];
+  const paymentMethods: PhuongThucThanhToan[] = ["PAYOS", "TIEN_MAT", "PAYOS", "PAYOS", "TIEN_MAT"];
 
   let totalTicketsSold = 0;
   let totalRevenue = 0;
@@ -349,7 +349,7 @@ async function main() {
         sc.MaSuatChieu,
         2,
         getRandomCustomer(),
-        "VNPAY",
+        "PAYOS",
         saleDate2,
       );
       if (result2) {
@@ -431,7 +431,7 @@ async function main() {
         sc.MaSuatChieu,
         4,
         getRandomCustomer(),
-        "VNPAY",
+        "PAYOS",
         saleDate2,
       );
       if (result2) {
@@ -513,7 +513,7 @@ async function main() {
       await prisma.giaoDich.create({
         data: {
           MaPhieuDat: cancelPhieu.MaPhieuDat,
-          PhuongThuc: "VNPAY",
+          PhuongThuc: "PAYOS",
           SoTien: cancelTotal,
           TrangThai: TrangThaiGiaoDich.THAT_BAI,
         },

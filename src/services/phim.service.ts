@@ -19,6 +19,7 @@ import {
 } from '../validators/phim.validator';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import prisma from '../config/prisma';
+import { combineShowtimeDateTime } from '../utils/showtimeDateTime';
 
 // ========================
 // Types
@@ -98,15 +99,7 @@ export const getSuatChieuCuaPhim = async (maPhim: string) => {
 
   return suatChieus
     .filter((suatChieu) => {
-      const showtimeStart = new Date(suatChieu.NgayChieu);
-      const gioChieu = new Date(suatChieu.GioChieu);
-      showtimeStart.setHours(
-        gioChieu.getHours(),
-        gioChieu.getMinutes(),
-        gioChieu.getSeconds(),
-        gioChieu.getMilliseconds(),
-      );
-
+      const showtimeStart = combineShowtimeDateTime(suatChieu.NgayChieu, suatChieu.GioChieu);
       return showtimeStart >= now;
     })
     .map((suatChieu) => ({
@@ -154,18 +147,6 @@ export const taoPhim = async (input: CreatePhimInput): Promise<Phim> => {
   });
 };
 
-const getCombinedDateTime = (ngayChieu: Date, gioChieu: Date): Date => {
-  const year = ngayChieu.getUTCFullYear();
-  const month = ngayChieu.getUTCMonth();
-  const date = ngayChieu.getUTCDate();
-
-  const hours = gioChieu.getUTCHours();
-  const minutes = gioChieu.getUTCMinutes();
-  const seconds = gioChieu.getUTCSeconds();
-
-  return new Date(Date.UTC(year, month, date, hours, minutes, seconds));
-};
-
 const checkCanUpdateActiveStatus = async (maPhim: string): Promise<void> => {
   const showtimes = await prisma.suatChieu.findMany({
     where: { MaPhim: maPhim },
@@ -174,7 +155,7 @@ const checkCanUpdateActiveStatus = async (maPhim: string): Promise<void> => {
 
   const now = new Date();
   const hasFutureShowtime = showtimes.some((sc) => {
-    const startDateTime = getCombinedDateTime(sc.NgayChieu, sc.GioChieu);
+    const startDateTime = combineShowtimeDateTime(sc.NgayChieu, sc.GioChieu);
     return startDateTime >= now;
   });
 

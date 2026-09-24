@@ -23,6 +23,7 @@ export const env = {
   // Server
   PORT: parseInt(process.env.PORT ?? '5000', 10),
   NODE_ENV: process.env.NODE_ENV ?? 'development',
+  SEED_DEMO_DATA_ON_START: process.env.SEED_DEMO_DATA_ON_START === 'true',
 
   // Database
   DATABASE_URL: process.env.DATABASE_URL as string,
@@ -56,13 +57,14 @@ export const env = {
   PAYOS_RETURN_URL: process.env.PAYOS_RETURN_URL ?? '',
   PAYOS_CANCEL_URL: process.env.PAYOS_CANCEL_URL ?? '',
 
-  // VNPay
+  // VNPay sandbox/demo
   VNPAY_TMN_CODE: (process.env.VNPAY_TMN_CODE ?? '').trim(),
   VNPAY_HASH_SECRET: (process.env.VNPAY_HASH_SECRET ?? '').trim(),
   VNPAY_PAYMENT_URL: (process.env.VNPAY_PAYMENT_URL ?? 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html').trim(),
   VNPAY_CALLBACK_URL: (process.env.VNPAY_CALLBACK_URL ?? '').trim(),
   VNPAY_FRONTEND_RETURN_URL: (process.env.VNPAY_FRONTEND_RETURN_URL ?? '').trim(),
   VNPAY_IPN_URL: (process.env.VNPAY_IPN_URL ?? '').trim(),
+  VNPAY_ALLOW_SIGNED_RETURN_CONFIRMATION: process.env.VNPAY_ALLOW_SIGNED_RETURN_CONFIRMATION === 'true',
 
   // Helpers
   isProduction: () => process.env.NODE_ENV === 'production',
