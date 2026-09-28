@@ -62,7 +62,7 @@ export const xoaNguoiDung = asyncHandler(async (req: Request, res: Response) => 
 
   const msg =
     action === 'soft'
-      ? 'Người dùng đã có lịch sử ca làm việc/giao dịch nên chỉ vô hiệu hóa tài khoản'
+      ? 'Người dùng đã có lịch sử đặt vé/đánh giá nên chỉ vô hiệu hóa tài khoản'
       : 'Xóa tài khoản người dùng vĩnh viễn thành công';
 
   return sendSuccess(res, msg, data);

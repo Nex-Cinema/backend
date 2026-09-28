@@ -102,7 +102,7 @@ describe('👤 Quản Lý Tài Khoản Nguời Dùng Integration Tests', () => {
       const payload = {
         TenDangNhap: 'customer_new_01', // Duplicate username
         MatKhau: 'anotherpassword',
-        HoTen: 'Duplicate Staff',
+        HoTen: 'Duplicate Customer',
         Email: 'customer01@cinema.com', // Duplicate email
         SoDienThoai: '0987654324',
         VaiTro: Role.CUSTOMER,
