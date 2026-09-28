@@ -14,8 +14,8 @@ BE-1 verification: TypeScript noEmit passed; isolated MySQL database
 `nex_cinema_admin_test`: adminRefund + giaodich suites, 10/10 tests passed.
 Run: `node scripts/test-isolated.cjs tests/integration/adminRefund.test.ts tests/integration/giaodich.test.ts`.
 
-BE-2 verification: 10 Admin suites / 97 tests passed (refund, transactions,
-metadata, rooms, layouts, showtimes, shifts, statistics, users, movies).
+BE-2 verification: Admin suites passed (refund, transactions, metadata, rooms,
+layouts, showtimes, statistics, users, movies).
 `node node_modules/typescript/bin/tsc --noEmit` passed.
 Concurrency cases cover eight approvals, approval vs rejection, direct refunds,
 both refund entry points, rollback and protection of newer seat reservations.
@@ -23,3 +23,7 @@ both refund entry points, rollback and protection of newer seat reservations.
 BE-3: ADMIN_INTERVIEW.md maps routes to implementation, describes conditional
 updates and rollback, provides isolated verification commands and documents
 manual transfer, customer-flow, partial-refund and rejection-audit limitations.
+
+Current interview scope uses only `ADMIN` and `CUSTOMER`. Workforce, counter
+sales, admission/check-in, and Staff entities were intentionally removed from
+the active backend and preserved on `legacy/backend-full-scope`.

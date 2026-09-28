@@ -2,14 +2,14 @@
 
 ## Phạm vi
 
-Dự án hai người; tài liệu này tập trung nhánh Admin, không nhận toàn bộ customer,
-payment gateway hoặc staff là đóng góp cá nhân. Đối chiếu commit và phân công
+Dự án hai người; tài liệu này tập trung nhánh Admin, không nhận toàn bộ customer
+hoặc payment gateway là đóng góp cá nhân. Đối chiếu commit và phân công
 thực tế trước khi dùng câu “em xây dựng”. Các thay đổi trong đợt này: test an toàn,
 chống hoàn tiền trùng, bảo toàn ghế đã được người khác giữ/đặt, tài liệu flow.
 
 ## Thứ tự đọc trong 60–90 phút
 
-1. `src/routes/admin/index.ts`: middleware xác thực và `requireRoles(Role.ADMIN)`
+1. `src/routes/index.ts`: middleware xác thực và `requireRoles(Role.ADMIN)`
    chạy trước mọi router con. Ẩn menu frontend không phải bảo mật.
 2. Chọn router nghiệp vụ → validator → controller → service → repository.
    Controller lấy input/trả response; service kiểm tra nghiệp vụ; repository truy
@@ -25,7 +25,7 @@ chống hoàn tiền trùng, bảo toàn ghế đã được người khác gi�
 | Phim | `/phim` | `phim.routes.ts`, `phim.service.ts`, `phim.repository.ts` |
 | Phòng, sơ đồ, ghế | `/phong-chieu`, `/so-do-ghe` | `phongchieu.service.ts`, `sodoghe.service.ts` |
 | Xếp lịch | `/suat-chieu` | `suatchieu.service.ts` và test cùng tên |
-| Nhân sự, ca | `/nguoi-dung`, `/ca-lam-viec` | `user.service.ts`, `calamviec.service.ts` |
+| Tài khoản | `/nguoi-dung` | `modules/identity/user-admin/user.service.ts` |
 | Giao dịch | `/giao-dich` | `giaodich.service.ts` |
 | Yêu cầu hoàn | `/hoan-tien` | `hoantien.service.ts`, `hoantien.repository.ts` |
 | Dashboard | `/thong-ke/doanh-thu`, `/thong-ke/ti-le-ghe` | `thongke.service.ts` |
@@ -52,7 +52,7 @@ Trong một Prisma transaction:
    chi tiết vé khả dụng của booking khác đang chờ thanh toán/đã thanh toán.
 6. Commit tất cả hoặc rollback tất cả nếu bất kỳ bước nào thất bại.
 
-`src/repositories/refundSettlement.ts` chứa hai thao tác dùng chung. Chặn ở DB
+`src/modules/billing/refund/refundSettlement.ts` chứa hai thao tác dùng chung. Chặn ở DB
 mới xử lý được nhiều request đồng thời; disable nút UI chỉ cải thiện trải nghiệm.
 Request lặp bị từ chối, không phải replay lại response thành công cũ.
 
@@ -67,7 +67,8 @@ local hợp lệ; không commit hoặc đưa giá trị bí mật vào tài li�
 
 ```sh
 node node_modules/typescript/bin/tsc --noEmit
-node scripts/test-isolated.cjs tests/integration/adminRefund.test.ts tests/integration/giaodich.test.ts tests/integration/metadata.test.ts tests/integration/phongchieu.test.ts tests/integration/sodoghe.test.ts tests/integration/suatchieu.test.ts tests/integration/calamviec.test.ts tests/integration/thongke.test.ts tests/integration/user.test.ts tests/integration/phim.test.ts --silent
+npm run build
+npm test -- --runInBand
 ```
 
 Runner chỉ nhận localhost/127.0.0.1, tạo schema `nex_cinema_admin_test`, chạy
@@ -76,10 +77,10 @@ trong bị test xóa.** Không đặt dữ liệu demo/ứng dụng vào schema 
 MySQL cần quyền tạo schema. `tests/setup.ts` từ chối DB không có hậu tố `_test`
 hoặc `_test_db`; đây là guard chống nhầm DB, không thay thế việc kiểm tra URL.
 
-Baseline của đợt: 10 suite / 97 test pass và TypeScript noEmit pass. Có test 8
+Baseline của đợt: 17 suite / 166 test pass và TypeScript build pass. Có test 8
 request duyệt đồng thời chỉ một thành công; duyệt vs từ chối; hai lối hoàn tiền;
 rollback khi thao tác ghế lỗi; không nhả ghế đã giữ/bán cho booking khác.
-Không suy ra toàn bộ customer/staff/payment đã được E2E kiểm thử.
+Không suy ra toàn bộ payment provider bên ngoài đã được E2E kiểm thử.
 
 ## Hạn chế cần nói thật
 
