@@ -108,7 +108,8 @@ describe('Admin refund transitions', () => {
   it.each(['DANG_GIU', 'DA_DAT'] as const)('preserves a newer %s reservation on the same seat', async (state) => {
     const { refund, ticket } = await fixture();
     await prisma.phieuDatVe.update({ where: { MaPhieuDat: ticket.MaPhieuDat }, data: { TrangThai: 'DA_HUY' } });
-    const newer = await prisma.phieuDatVe.create({ data: { TongTien: 50000, TrangThai: state === 'DA_DAT' ? 'DA_THANH_TOAN' : 'CHO_THANH_TOAN' } });
+    const customer = await prisma.khachHang.findFirstOrThrow();
+    const newer = await prisma.phieuDatVe.create({ data: { MaKhachHang: customer.MaKhachHang, TongTien: 50000, TrangThai: state === 'DA_DAT' ? 'DA_THANH_TOAN' : 'CHO_THANH_TOAN' } });
     await prisma.chiTietDatVe.create({ data: { MaPhieuDat: newer.MaPhieuDat, MaGheSuatChieu: ticket.MaGheSuatChieu, GiaVe: 50000 } });
     await prisma.gheSuatChieu.update({ where: { MaGheSuatChieu: ticket.MaGheSuatChieu }, data: { TrangThai: state } });
     expect((await approve(refund.MaHoanTien)).status).toBe(200);

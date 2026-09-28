@@ -81,7 +81,6 @@ export const createPaidBookingTransaction = async (
     const phieuDatVe = await tx.phieuDatVe.create({
       data: {
         MaKhachHang: maKhachHang,
-        MaNhanVien: null,
         TongTien: tongTien,
         TrangThai: 'DA_THANH_TOAN',
         KhaDung: true,
@@ -294,7 +293,6 @@ export const createPendingBookingTransaction = async (
     const phieuDatVe = await tx.phieuDatVe.create({
       data: {
         MaKhachHang: maKhachHang,
-        MaNhanVien: null,
         TongTien: tongTien,
         TrangThai: 'CHO_THANH_TOAN',
         KhaDung: true,

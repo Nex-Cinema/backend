@@ -90,4 +90,28 @@ describe('feature architecture boundaries', () => {
     expect(compositionSource).not.toMatch(/StaffRouter|shiftAdminRouter|\/staff\//);
     expect(compositionSource).not.toContain("'/ca-lam-viec'");
   });
+
+  it('keeps the Prisma model limited to Admin and Customer actors', () => {
+    const schema = fs.readFileSync(
+      path.resolve(__dirname, '../../prisma/schema.prisma'),
+      'utf8',
+    );
+    const removedSchemaTerms = [
+      'STAFF',
+      'model NhanVien',
+      'model CaLamViec',
+      'model ChiTietCaLamViec',
+      'MaNhanVien',
+      'DaCheckIn',
+      'ThoiGianCheckIn',
+      'CuaSoCheckInPhut',
+      'HanHuyCaTruocGio',
+    ];
+
+    for (const term of removedSchemaTerms) {
+      expect(schema).not.toContain(term);
+    }
+    expect(schema).toMatch(/model PhieuDatVe[\s\S]*?MaKhachHang\s+String\s+@db\.VarChar\(36\)/);
+    expect(schema).toMatch(/model PhieuDatVe[\s\S]*?KhachHang\s+KhachHang\s+@relation/);
+  });
 });

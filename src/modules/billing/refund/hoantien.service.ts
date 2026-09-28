@@ -13,6 +13,7 @@ import {
   rejectRefundRequest,
 } from './hoantien.repository';
 import { BadRequestError, NotFoundError } from '../../../utils/errors';
+import { combineShowtimeDateTime } from '../../../utils/showtimeDateTime';
 
 const { findCustomerByAccountId } = identityQueries;
 const { findBookingForCustomer } = bookingQueries;
@@ -49,9 +50,7 @@ export const yeuCauHoanTien = async (maTaiKhoan: string, input: RefundRequestInp
   }
 
   const now = new Date();
-  const showtimeStart = new Date(showtime.NgayChieu);
-  const gioChieu = new Date(showtime.GioChieu);
-  showtimeStart.setHours(gioChieu.getHours(), gioChieu.getMinutes(), gioChieu.getSeconds());
+  const showtimeStart = combineShowtimeDateTime(showtime.NgayChieu, showtime.GioChieu);
 
   if (showtimeStart <= now) {
     throw new BadRequestError('Suất chiếu đã bắt đầu hoặc đã diễn ra, không thể yêu cầu hoàn tiền.');

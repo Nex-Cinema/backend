@@ -44,18 +44,6 @@ export const getDanhSachPhieuDatVe = async (
           },
         },
       },
-      {
-        NhanVien: {
-          TaiKhoan: {
-            OR: [
-              { HoTen: { contains: search } },
-              { TenDangNhap: { contains: search } },
-              { Email: { contains: search } },
-              { SoDienThoai: { contains: search } },
-            ],
-          },
-        },
-      },
     ];
   }
 
@@ -64,18 +52,6 @@ export const getDanhSachPhieuDatVe = async (
       where,
       include: {
         KhachHang: {
-          include: {
-            TaiKhoan: {
-              select: {
-                HoTen: true,
-                Email: true,
-                SoDienThoai: true,
-                TenDangNhap: true,
-              },
-            },
-          },
-        },
-        NhanVien: {
           include: {
             TaiKhoan: {
               select: {
@@ -135,18 +111,6 @@ export const getChiTietPhieuDatVe = async (maPhieuDat: string): Promise<any> => 
     where: { MaPhieuDat: maPhieuDat },
     include: {
       KhachHang: {
-        include: {
-          TaiKhoan: {
-            select: {
-              HoTen: true,
-              Email: true,
-              SoDienThoai: true,
-              TenDangNhap: true,
-            },
-          },
-        },
-      },
-      NhanVien: {
         include: {
           TaiKhoan: {
             select: {

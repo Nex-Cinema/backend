@@ -43,12 +43,10 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
   beforeEach(async () => {
     await prisma.cauHinhVanHanh.upsert({
       where: { Id: 1 },
-      update: { ThoiGianGiuGhePhut: 10, CuaSoCheckInPhut: 30, HanHuyCaTruocGio: 2 },
-      create: { Id: 1, ThoiGianGiuGhePhut: 10, CuaSoCheckInPhut: 30, HanHuyCaTruocGio: 2 },
+      update: { ThoiGianGiuGhePhut: 10 },
+      create: { Id: 1, ThoiGianGiuGhePhut: 10 },
     });
     // Clean up showtimes and bookings between tests to ensure isolated runs
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.lichSuHoanTien.deleteMany({});
     await prisma.giaoDich.deleteMany({});
     await prisma.chiTietDatVe.deleteMany({});

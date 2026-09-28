@@ -21,6 +21,8 @@ prisma/migrations/*
 !prisma/migrations/20260924120000_add_seat_span_capacity/migration.sql
 !prisma/migrations/20260924130000_add_operational_settings/
 !prisma/migrations/20260924130000_add_operational_settings/migration.sql
+!prisma/migrations/20260928120000_remove_staff_scope/
+!prisma/migrations/20260928120000_remove_staff_scope/migration.sql
 
 # TypeScript
 *.tsbuildinfo
