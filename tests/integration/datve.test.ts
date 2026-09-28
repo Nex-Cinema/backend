@@ -41,9 +41,12 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
   });
 
   beforeEach(async () => {
+    await prisma.cauHinhVanHanh.upsert({
+      where: { Id: 1 },
+      update: { ThoiGianGiuGhePhut: 10 },
+      create: { Id: 1, ThoiGianGiuGhePhut: 10 },
+    });
     // Clean up showtimes and bookings between tests to ensure isolated runs
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.lichSuHoanTien.deleteMany({});
     await prisma.giaoDich.deleteMany({});
     await prisma.chiTietDatVe.deleteMany({});
@@ -159,6 +162,32 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
       expect(dbSeat?.TrangThai).toBe('DANG_GIU');
       expect(dbSeat?.MaTaiKhoanGiu).toBe(customerAccount.MaTaiKhoan);
       expect(dbSeat?.ThoiGianGiuGhe).not.toBeNull();
+      const remainingMs = dbSeat!.ThoiGianGiuGhe!.getTime() - Date.now();
+      expect(remainingMs).toBeGreaterThan(9 * 60 * 1000);
+      expect(remainingMs).toBeLessThanOrEqual(10 * 60 * 1000);
+    });
+
+    it('should apply an updated hold duration from operational settings', async () => {
+      await prisma.cauHinhVanHanh.update({
+        where: { Id: 1 },
+        data: { ThoiGianGiuGhePhut: 12 },
+      });
+
+      const res = await request(app)
+        .post('/api/v1/dat-ve/giu-ghe')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          MaSuatChieu: showtime.MaSuatChieu,
+          DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
+        });
+
+      expect(res.status).toBe(200);
+      const dbSeat = await prisma.gheSuatChieu.findUnique({
+        where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
+      });
+      const remainingMs = dbSeat!.ThoiGianGiuGhe!.getTime() - Date.now();
+      expect(remainingMs).toBeGreaterThan(11 * 60 * 1000);
+      expect(remainingMs).toBeLessThanOrEqual(12 * 60 * 1000);
     });
 
     it('should block non-CUSTOMER roles from calling the hold endpoint', async () => {
@@ -240,7 +269,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
       const dbSeat = await prisma.gheSuatChieu.findUnique({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
       });
-      // Verification: expiry extended to ~5 minutes from now (must be greater than pastExpiry)
+      // Verification: expiry extended to ~10 minutes from now (must be greater than pastExpiry)
       expect(dbSeat?.ThoiGianGiuGhe!.getTime()).toBeGreaterThan(pastExpiry.getTime());
     });
 
@@ -367,7 +396,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('1. CUSTOMER can pay successfully for their own held seats via simulation', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -383,7 +412,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -396,7 +425,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('2. Payment success creates PHIEUDATVE, CHITIETDATVE, GIAODICH in database', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -412,7 +441,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -434,13 +463,13 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
 
       // Verify GiaoDich
       expect(dbBooking?.GiaoDichs).toHaveLength(1);
-      expect(dbBooking?.GiaoDichs[0].PhuongThuc).toBe('VNPAY');
+      expect(dbBooking?.GiaoDichs[0].PhuongThuc).toBe('TIEN_MAT');
       expect(dbBooking?.GiaoDichs[0].TrangThai).toBe('THANH_CONG');
       expect(Number(dbBooking?.GiaoDichs[0].SoTien)).toBe(105000);
     });
 
     it('3. Payment success updates seats to DA_DAT', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -456,7 +485,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -469,7 +498,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('4. CUSTOMER cannot pay for seats held by another user', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -486,7 +515,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -512,7 +541,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -557,7 +586,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -577,7 +606,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     it('5c. CUSTOMER cannot pay for seat held by another user even if seat count matches', async () => {
       // Both seats are held but by different users – customer1 pays for both,
       // expects failure because seat2 is owned by customer2.
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -601,7 +630,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu, seat2.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -611,7 +640,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('6. Failed payment releases held seats and creates no successful booking', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -627,7 +656,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THAT_BAI',
         });
 
@@ -650,7 +679,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
 
     it('7. Customer can cancel own paid booking before showtime starts', async () => {
       // 1. Pay successfully to create a booking
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -666,7 +695,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -678,6 +707,9 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .set('Authorization', `Bearer ${customerToken}`)
         .send({
           LyDoHoan: 'Tôi bận việc đột xuất',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       expect(cancelRes.status).toBe(200);
@@ -691,7 +723,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('8. Cancelling paid booking creates LICHSUHOANTIEN with CHO_XU_LY', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -707,7 +739,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -718,6 +750,9 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .set('Authorization', `Bearer ${customerToken}`)
         .send({
           LyDoHoan: 'Tôi bận việc đột xuất',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       const dbRefund = await prisma.lichSuHoanTien.findFirst({
@@ -735,7 +770,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('9. Cancelling paid booking does not release seats immediately', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -751,7 +786,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -762,6 +797,9 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .set('Authorization', `Bearer ${customerToken}`)
         .send({
           LyDoHoan: 'Tôi bận việc đột xuất',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       // Verify database: seat status must remain DA_DAT
@@ -772,7 +810,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('10. Customer cannot cancel another customer booking', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -788,7 +826,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -807,7 +845,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
 
     it('11. Customer cannot cancel booking after showtime starts', async () => {
-      const futureExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.gheSuatChieu.update({
         where: { MaGheSuatChieu: seat1.MaGheSuatChieu },
         data: {
@@ -823,7 +861,7 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
         .send({
           MaSuatChieu: showtime.MaSuatChieu,
           DanhSachMaGheSuatChieu: [seat1.MaGheSuatChieu],
-          PhuongThucThanhToan: 'VNPAY',
+          PhuongThucThanhToan: 'TIEN_MAT',
           KetQuaThanhToan: 'THANH_CONG',
         });
 
@@ -853,4 +891,3 @@ describe('🎟️ Seat Map and Hold Integration Tests', () => {
     });
   });
 });
-

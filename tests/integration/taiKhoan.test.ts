@@ -5,13 +5,11 @@ import {
   cleanupTestData,
   createTestAdmin,
   createTestCustomer,
-  createTestStaff,
   loginAndGetToken,
 } from '../helpers';
 
 describe('👤 Customer Profile Integration Tests', () => {
   let adminToken: string;
-  let staffToken: string;
   let customerToken: string;
   let customerAccount: any;
   let secondCustomerAccount: any;
@@ -22,7 +20,6 @@ describe('👤 Customer Profile Integration Tests', () => {
 
     // Create test accounts
     await createTestAdmin('admin_profile_test', 'password123');
-    await createTestStaff('staff_profile_test', 'password123');
     customerAccount = await createTestCustomer('cust_profile_test', 'password123');
     // Create a second customer for duplicate email/phone tests (give it distinct random phone/email in helper)
     secondCustomerAccount = await prisma.taiKhoan.create({
@@ -39,7 +36,6 @@ describe('👤 Customer Profile Integration Tests', () => {
 
     // Login and get tokens
     adminToken = await loginAndGetToken(app, 'admin_profile_test', 'password123');
-    staffToken = await loginAndGetToken(app, 'staff_profile_test', 'password123');
     customerToken = await loginAndGetToken(app, 'cust_profile_test', 'password123');
   });
 
@@ -76,16 +72,10 @@ describe('👤 Customer Profile Integration Tests', () => {
       expect(res.body.data.refreshTokens).toBeUndefined();
     });
 
-    it('3. STAFF/ADMIN/Guest cannot access customer profile routes', async () => {
+    it('3. ADMIN/Guest cannot access customer profile routes', async () => {
       // Guest
       const resGuest = await request(app).get('/api/v1/tai-khoan/thong-tin');
       expect(resGuest.status).toBe(401);
-
-      // Staff
-      const resStaff = await request(app)
-        .get('/api/v1/tai-khoan/thong-tin')
-        .set('Authorization', `Bearer ${staffToken}`);
-      expect(resStaff.status).toBe(403);
 
       // Admin
       const resAdmin = await request(app)

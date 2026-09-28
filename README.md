@@ -25,28 +25,23 @@ cinema-booking-system-backend/
 │   ├── config/
 │   │   ├── env.ts                 # Environment config & validation
 │   │   └── prisma.ts              # Prisma client singleton
-│   ├── routes/
-│   │   ├── index.ts               # Main router (health check + mounts)
-│   │   ├── auth.routes.ts         # Auth routes
-│   │   └── phim.routes.ts         # Movie routes
-│   ├── controllers/
-│   │   ├── auth.controller.ts     # Auth HTTP handlers
-│   │   └── phim.controller.ts     # Movie HTTP handlers
-│   ├── services/
-│   │   ├── auth.service.ts        # Auth business logic
-│   │   └── phim.service.ts        # Movie business logic
-│   ├── repositories/
-│   │   ├── taikhoan.repository.ts # TaiKhoan DB queries
-│   │   └── phim.repository.ts     # Phim DB queries
+│   ├── routes/index.ts            # Composition root, giữ URL contract
+│   ├── modules/
+│   │   ├── identity/              # Auth, tài khoản, quản trị user
+│   │   ├── catalog/               # Phim, đánh giá
+│   │   ├── cinema/                # Phòng, sơ đồ và loại ghế
+│   │   ├── showtime/              # Suất chiếu, ghế theo suất
+│   │   ├── booking/               # Giữ ghế, đặt/hủy vé, lịch sử
+│   │   ├── billing/               # Payment, giao dịch, hoàn tiền
+│   │   ├── reporting/             # Thống kê Admin
+│   │   └── operational-settings/  # Policy giữ ghế runtime
 │   ├── middlewares/
 │   │   ├── auth.middleware.ts     # JWT verification
 │   │   ├── role.middleware.ts     # Role-based authorization
 │   │   ├── validate.middleware.ts # Zod schema validation
 │   │   ├── error.middleware.ts    # Global error handler
 │   │   └── not-found.middleware.ts# 404 handler
-│   ├── validators/
-│   │   ├── auth.validator.ts      # Auth Zod schemas
-│   │   └── phim.validator.ts      # Movie Zod schemas
+│   ├── shared/                    # Primitive dùng chung, không chứa nghiệp vụ
 │   ├── utils/
 │   │   ├── jwt.ts                 # JWT sign/verify helpers
 │   │   ├── password.ts            # bcrypt helpers
@@ -153,10 +148,10 @@ Server sẽ chạy tại: `http://localhost:5000`
 |--------|----------|-------|--------|
 | GET | `/api/v1/phim` | Danh sách phim (có lọc, phân trang) | Public |
 | GET | `/api/v1/phim/:maPhim` | Chi tiết phim | Public |
-| POST | `/api/v1/phim` | Tạo phim mới | ADMIN |
-| PUT | `/api/v1/phim/:maPhim` | Cập nhật phim | ADMIN |
-| PATCH | `/api/v1/phim/:maPhim/soft-delete` | Ẩn phim (soft delete) | ADMIN |
-| DELETE | `/api/v1/phim/:maPhim` | Xóa phim vĩnh viễn | ADMIN |
+| POST | `/api/v1/admin/phim` | Tạo phim mới | ADMIN |
+| PUT | `/api/v1/admin/phim/:maPhim` | Cập nhật phim | ADMIN |
+| PATCH | `/api/v1/admin/phim/:maPhim/soft-delete` | Ẩn phim (soft delete) | ADMIN |
+| DELETE | `/api/v1/admin/phim/:maPhim` | Xóa phim vĩnh viễn | ADMIN |
 
 ### Query params cho GET /api/v1/phim
 
@@ -189,7 +184,6 @@ Server sẽ chạy tại: `http://localhost:5000`
 | Vai trò | Tên đăng nhập | Mật khẩu |
 |---------|---------------|----------|
 | ADMIN | `admin` | `123456` |
-| STAFF | `nhanvien01` | `123456` |
 | CUSTOMER | `khachhang01` | `123456` |
 
 ---
@@ -212,26 +206,25 @@ Server sẽ chạy tại: `http://localhost:5000`
 ```
 TaiKhoan (tai_khoan)
   ├── KhachHang (khach_hang) - quan hệ 1-1
-  ├── NhanVien (nhan_vien)  - quan hệ 1-1
   └── RefreshToken (refresh_token) - quan hệ 1-n
 
-Phim (phim) - độc lập
+KhachHang 1 ── n PhieuDatVe 1 ── n ChiTietDatVe
+PhieuDatVe 1 ── n GiaoDich 1 ── n LichSuHoanTien
+Phim 1 ── n SuatChieu 1 ── n GheSuatChieu
 
-Enum Role: ADMIN | STAFF | CUSTOMER
+Enum Role: ADMIN | CUSTOMER
 ```
 
 ---
 
 ## 🔒 Phân quyền (RBAC)
 
-| Hành động | ADMIN | STAFF | CUSTOMER | Public |
-|-----------|-------|-------|----------|--------|
-| Xem danh sách phim | ✅ | ✅ | ✅ | ✅ |
-| Xem chi tiết phim | ✅ | ✅ | ✅ | ✅ |
-| Tạo phim | ✅ | ❌ | ❌ | ❌ |
-| Cập nhật phim | ✅ | ❌ | ❌ | ❌ |
-| Ẩn phim | ✅ | ❌ | ❌ | ❌ |
-| Xóa phim | ✅ | ❌ | ❌ | ❌ |
+| Hành động | ADMIN | CUSTOMER | Public |
+|-----------|-------|----------|--------|
+| Xem phim/suất chiếu | ✅ | ✅ | ✅ |
+| Quản lý phim, phòng, suất chiếu | ✅ | ❌ | ❌ |
+| Giữ ghế, đặt vé, xem lịch sử | ❌ | ✅ | ❌ |
+| Quản lý giao dịch, hoàn tiền, thống kê | ✅ | ❌ | ❌ |
 
 ---
 

@@ -353,6 +353,9 @@ describe('💳 Customer History, Reviews, and Refund Requests Integration Tests'
         .send({
           MaPhieuDat: booking.MaPhieuDat,
           LyDo: 'Tôi có việc khẩn cấp',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       expect(res.status).toBe(200);
@@ -375,6 +378,9 @@ describe('💳 Customer History, Reviews, and Refund Requests Integration Tests'
         .send({
           MaPhieuDat: booking.MaPhieuDat,
           LyDo: 'Hủy lần 1',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       // Second request -> should block
@@ -384,6 +390,9 @@ describe('💳 Customer History, Reviews, and Refund Requests Integration Tests'
         .send({
           MaPhieuDat: booking.MaPhieuDat,
           LyDo: 'Hủy lần 2',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       expect(res.status).toBe(400);
@@ -397,6 +406,9 @@ describe('💳 Customer History, Reviews, and Refund Requests Integration Tests'
         .send({
           MaPhieuDat: booking.MaPhieuDat,
           LyDo: 'Hủy vé không nhường ghế ngay',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       // Seats must remain DA_DAT
@@ -414,6 +426,9 @@ describe('💳 Customer History, Reviews, and Refund Requests Integration Tests'
         .send({
           MaPhieuDat: booking.MaPhieuDat,
           LyDo: 'Xem danh sách hoàn tiền',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       // Customer 1 should see 1 request
@@ -451,6 +466,9 @@ describe('💳 Customer History, Reviews, and Refund Requests Integration Tests'
         .send({
           MaPhieuDat: booking.MaPhieuDat,
           LyDo: 'Chiếu mất rồi vẫn muốn hoàn tiền',
+          TenNganHang: 'MBBank',
+          SoTaiKhoan: '999999',
+          TenChuTaiKhoan: 'NGUYEN VAN A',
         });
 
       expect(res.status).toBe(400);

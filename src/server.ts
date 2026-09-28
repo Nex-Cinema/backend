@@ -3,6 +3,7 @@ import app from './app';
 import { env } from './config/env';
 import prisma from './config/prisma';
 import { startReleaseExpiredSeatHoldsJob } from './jobs/releaseExpiredSeatHolds.job';
+import { ensureDemoBookingData } from './modules/booking';
 
 const PORT = env.PORT;
 
@@ -33,6 +34,10 @@ const startServer = async (): Promise<void> => {
     // Test database connection
     await prisma.$connect();
     console.log('✅ Kết nối cơ sở dữ liệu thành công');
+
+    if (env.SEED_DEMO_DATA_ON_START) {
+      await ensureDemoBookingData();
+    }
 
     app.listen(PORT, () => {
       if (env.NODE_ENV !== 'test') {
