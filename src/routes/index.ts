@@ -7,7 +7,7 @@ import { requireRoles } from '../middlewares/role.middleware';
 // ============================================================
 // Module routes — feature-based structure
 // ============================================================
-import { authRouter, accountRouter, userAdminRouter, staffProfileRouter } from '../modules/identity';
+import { authRouter, accountRouter, userAdminRouter } from '../modules/identity';
 import { movieRouter, movieAdminRouter, reviewRouter, movieReviewRouter } from '../modules/catalog';
 import { publicRouter as showtimeRouter, adminRouter as showtimeAdminRouter } from '../modules/showtime';
 import { reservationRouter, historyRouter } from '../modules/booking';
@@ -19,10 +19,7 @@ import {
   refundAdminRouter,
   transactionAdminRouter,
 } from '../modules/billing';
-import { staffRouter as boxOfficeStaffRouter } from '../modules/box-office';
-import { staffRouter as admissionStaffRouter } from '../modules/admission';
-import { scheduleStaffRouter, shiftAdminRouter } from '../modules/workforce';
-import { adminRouter as reportingAdminRouter, staffRouter as reportingStaffRouter } from '../modules/reporting';
+import { adminRouter as reportingAdminRouter } from '../modules/reporting';
 
 // Admin-only routes
 import { metadataAdminRouter, roomAdminRouter, seatMapAdminRouter } from '../modules/cinema';
@@ -54,13 +51,6 @@ router.use('/danh-gia', reviewRouter);
 router.use('/hoan-tien', refundRouter);
 router.use('/tai-khoan', accountRouter);
 
-// Staff routes (own auth/role checks inside each route file)
-router.use('/', boxOfficeStaffRouter);
-router.use('/', admissionStaffRouter);
-router.use('/', scheduleStaffRouter);
-router.use('/', staffProfileRouter);
-router.use('/', reportingStaffRouter);
-
 // ========================
 // Admin Routes (auth + ADMIN role applied globally)
 // ========================
@@ -75,7 +65,6 @@ adminRouter.use('/phim', movieAdminRouter);
 adminRouter.use('/so-do-ghe', seatMapAdminRouter);
 adminRouter.use('/nguoi-dung', userAdminRouter);
 adminRouter.use('/giao-dich', transactionAdminRouter);
-adminRouter.use('/ca-lam-viec', shiftAdminRouter);
 adminRouter.use('/thong-ke', reportingAdminRouter);
 adminRouter.use('/hoan-tien', refundAdminRouter);
 adminRouter.use('/cong-thanh-toan', paymentGatewayAdminRouter);

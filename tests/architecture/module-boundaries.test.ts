@@ -68,4 +68,26 @@ describe('feature architecture boundaries', () => {
 
     expect(violations).toEqual([]);
   });
+
+  it('does not expose removed staff capabilities', () => {
+    const removedPaths = [
+      path.join(modulesRoot, 'workforce'),
+      path.join(modulesRoot, 'box-office'),
+      path.join(modulesRoot, 'admission'),
+      path.join(modulesRoot, 'identity', 'staff-profile'),
+      path.join(modulesRoot, 'reporting', 'staff'),
+    ];
+    const compositionSource = fs.readFileSync(
+      path.join(sourceRoot, 'routes', 'index.ts'),
+      'utf8',
+    );
+
+    const remainingFiles = removedPaths.flatMap((removedPath) =>
+      fs.existsSync(removedPath) ? walkTypeScriptFiles(removedPath) : [],
+    );
+
+    expect(remainingFiles).toEqual([]);
+    expect(compositionSource).not.toMatch(/StaffRouter|shiftAdminRouter|\/staff\//);
+    expect(compositionSource).not.toContain("'/ca-lam-viec'");
+  });
 });

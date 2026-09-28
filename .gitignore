@@ -42,3 +42,6 @@ logs/
 # CodeGraph
 .codegraph/
 
+# Superpowers execution ledgers
+.superpowers/
+
