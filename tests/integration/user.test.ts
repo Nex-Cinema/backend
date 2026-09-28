@@ -39,17 +39,16 @@ describe('👤 Quản Lý Tài Khoản Nguời Dùng Integration Tests', () => {
   });
 
   describe('👤 User CRUD & Management Operations', () => {
-    it('should create a staff user successfully with NhanVien profile', async () => {
+    it('should create a customer without a staff profile', async () => {
       const payload = {
-        TenDangNhap: 'staff_new_01',
-        MatKhau: 'staffpassword',
-        HoTen: 'Nguyễn Văn Staff',
-        Email: 'staff01@cinema.com',
+        TenDangNhap: 'customer_new_01',
+        MatKhau: 'customerpassword',
+        HoTen: 'Nguyễn Văn Customer',
+        Email: 'customer01@cinema.com',
         SoDienThoai: '0987654321',
         GioiTinh: true,
         NgaySinh: '1995-10-15',
-        VaiTro: Role.STAFF,
-        ChucVu: 'Bán vé ca sáng',
+        VaiTro: Role.CUSTOMER,
       };
 
       const res = await request(app)
@@ -59,21 +58,54 @@ describe('👤 Quản Lý Tài Khoản Nguời Dùng Integration Tests', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.TenDangNhap).toBe('staff_new_01');
-      expect(res.body.data.NhanVien).toBeDefined();
-      expect(res.body.data.NhanVien.ChucVu).toBe('Bán vé ca sáng');
+      expect(res.body.data.TenDangNhap).toBe('customer_new_01');
+      expect(res.body.data.KhachHang).toBeDefined();
+      expect(res.body.data.NhanVien).toBeUndefined();
       expect(res.body.data.MatKhau).toBeUndefined(); // Security check
+    });
+
+    it('should reject the removed STAFF role', async () => {
+      const res = await request(app)
+        .post('/api/v1/admin/nguoi-dung')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          TenDangNhap: 'removed_staff',
+          MatKhau: 'staffpassword',
+          HoTen: 'Removed Staff',
+          Email: 'removed-staff@cinema.com',
+          SoDienThoai: '0987654322',
+          VaiTro: 'STAFF',
+          ChucVu: 'Nhân viên cũ',
+        });
+
+      expect(res.status).toBe(422);
+    });
+
+    it('should reject the removed ChucVu field', async () => {
+      const res = await request(app)
+        .post('/api/v1/admin/nguoi-dung')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          TenDangNhap: 'customer_with_title',
+          MatKhau: 'customerpassword',
+          HoTen: 'Customer With Title',
+          Email: 'customer-title@cinema.com',
+          SoDienThoai: '0987654323',
+          VaiTro: 'CUSTOMER',
+          ChucVu: 'Không còn hỗ trợ',
+        });
+
+      expect(res.status).toBe(422);
     });
 
     it('should reject creation with duplicate Email or username', async () => {
       const payload = {
-        TenDangNhap: 'staff_new_01', // Duplicate username
+        TenDangNhap: 'customer_new_01', // Duplicate username
         MatKhau: 'anotherpassword',
         HoTen: 'Duplicate Staff',
-        Email: 'staff01@cinema.com', // Duplicate email
-        SoDienThoai: '0987654322',
-        VaiTro: Role.STAFF,
-        ChucVu: 'Thu ngân',
+        Email: 'customer01@cinema.com', // Duplicate email
+        SoDienThoai: '0987654324',
+        VaiTro: Role.CUSTOMER,
       };
 
       const res = await request(app)
@@ -91,7 +123,7 @@ describe('👤 Quản Lý Tài Khoản Nguời Dùng Integration Tests', () => {
         .query({
           page: 1,
           limit: 10,
-          vaiTro: Role.STAFF,
+          vaiTro: Role.CUSTOMER,
         });
 
       expect(res.status).toBe(200);
@@ -100,9 +132,9 @@ describe('👤 Quản Lý Tài Khoản Nguời Dùng Integration Tests', () => {
       expect(res.body.pagination.page).toBe(1);
     });
 
-    it('should update user information and ChucVu correctly', async () => {
+    it('should update customer information', async () => {
       const user = await prisma.taiKhoan.findFirst({
-        where: { TenDangNhap: 'staff_new_01' },
+        where: { TenDangNhap: 'customer_new_01' },
       });
       expect(user).not.toBeNull();
 
@@ -110,18 +142,17 @@ describe('👤 Quản Lý Tài Khoản Nguời Dùng Integration Tests', () => {
         .put(`/api/v1/admin/nguoi-dung/${user!.MaTaiKhoan}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          HoTen: 'Nguyễn Văn Staff Updated',
-          ChucVu: 'Quản lý phòng chiếu',
+          HoTen: 'Nguyễn Văn Customer Updated',
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.HoTen).toBe('Nguyễn Văn Staff Updated');
-      expect(res.body.data.NhanVien.ChucVu).toBe('Quản lý phòng chiếu');
+      expect(res.body.data.HoTen).toBe('Nguyễn Văn Customer Updated');
+      expect(res.body.data.NhanVien).toBeUndefined();
     });
 
     it('should reset user password and allow login with new password', async () => {
       const user = await prisma.taiKhoan.findFirst({
-        where: { TenDangNhap: 'staff_new_01' },
+        where: { TenDangNhap: 'customer_new_01' },
       });
       expect(user).not.toBeNull();
 
@@ -138,7 +169,7 @@ describe('👤 Quản Lý Tài Khoản Nguời Dùng Integration Tests', () => {
       const loginRes = await request(app)
         .post('/api/v1/auth/login')
         .send({
-          TenDangNhap: 'staff_new_01',
+          TenDangNhap: 'customer_new_01',
           MatKhau: 'newpassword123',
         });
 

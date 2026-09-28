@@ -10,7 +10,6 @@ import {
 import { NotFoundError, ConflictError, BadRequestError } from '../../../utils/errors';
 
 export type SanitizedUser = Omit<TaiKhoan, 'MatKhau'> & {
-  NhanVien?: any;
   KhachHang?: any;
 };
 
@@ -54,7 +53,6 @@ export const getDanhSachNguoiDung = async (
     prisma.taiKhoan.findMany({
       where,
       include: {
-        NhanVien: true,
         KhachHang: true,
       },
       orderBy: { NgayTao: 'desc' },
@@ -80,7 +78,6 @@ export const getChiTietNguoiDung = async (maTaiKhoan: string): Promise<Sanitized
   const user = await prisma.taiKhoan.findUnique({
     where: { MaTaiKhoan: maTaiKhoan },
     include: {
-      NhanVien: true,
       KhachHang: true,
     },
   });
@@ -121,12 +118,8 @@ export const taoNguoiDung = async (input: CreateUserInput): Promise<SanitizedUse
         ...(input.VaiTro === Role.CUSTOMER && {
           KhachHang: { create: { KhaDung: true } },
         }),
-        ...((input.VaiTro === Role.STAFF || input.VaiTro === Role.ADMIN) && {
-          NhanVien: { create: { ChucVu: input.ChucVu || (input.VaiTro === Role.ADMIN ? 'Quản trị hệ thống' : 'Nhân viên'), KhaDung: true } },
-        }),
       },
       include: {
-        NhanVien: true,
         KhachHang: true,
       },
     });
@@ -141,7 +134,6 @@ export const capNhatNguoiDung = async (
 ): Promise<SanitizedUser> => {
   const user = await prisma.taiKhoan.findUnique({
     where: { MaTaiKhoan: maTaiKhoan },
-    include: { NhanVien: true },
   });
 
   if (!user) {
@@ -172,34 +164,14 @@ export const capNhatNguoiDung = async (
         KhaDung: input.KhaDung,
       },
       include: {
-        NhanVien: true,
         KhachHang: true,
       },
     });
-
-    // Update staff profile if role is STAFF/ADMIN and ChucVu is provided
-    if ((updated.VaiTro === Role.STAFF || updated.VaiTro === Role.ADMIN) && input.ChucVu) {
-      if (updated.NhanVien) {
-        await tx.nhanVien.update({
-          where: { MaNhanVien: updated.NhanVien.MaNhanVien },
-          data: { ChucVu: input.ChucVu },
-        });
-      } else {
-        await tx.nhanVien.create({
-          data: {
-            MaTaiKhoan: maTaiKhoan,
-            ChucVu: input.ChucVu,
-            KhaDung: true,
-          },
-        });
-      }
-    }
 
     // Return latest model state
     return tx.taiKhoan.findUnique({
       where: { MaTaiKhoan: maTaiKhoan },
       include: {
-        NhanVien: true,
         KhachHang: true,
       },
     });
@@ -231,7 +203,6 @@ export const xoaNguoiDung = async (
   const user = await prisma.taiKhoan.findUnique({
     where: { MaTaiKhoan: maTaiKhoan },
     include: {
-      NhanVien: true,
       KhachHang: true,
     },
   });
@@ -249,13 +220,6 @@ export const xoaNguoiDung = async (
       prisma.danhGia.count({ where: { MaKhachHang: maKhachHang } }),
     ]);
     dependencyCount = bookingsCount + reviewsCount;
-  } else if (user.VaiTro === Role.STAFF && user.NhanVien) {
-    const maNhanVien = user.NhanVien.MaNhanVien;
-    const [shiftsCount, bookingsCount] = await Promise.all([
-      prisma.chiTietCaLamViec.count({ where: { MaNhanVien: maNhanVien } }),
-      prisma.phieuDatVe.count({ where: { MaNhanVien: maNhanVien } }),
-    ]);
-    dependencyCount = shiftsCount + bookingsCount;
   }
 
   if (dependencyCount > 0) {
@@ -267,17 +231,10 @@ export const xoaNguoiDung = async (
           data: { KhaDung: false },
         });
       }
-      if (user.NhanVien) {
-        await tx.nhanVien.update({
-          where: { MaNhanVien: user.NhanVien.MaNhanVien },
-          data: { KhaDung: false },
-        });
-      }
       return tx.taiKhoan.update({
         where: { MaTaiKhoan: maTaiKhoan },
         data: { KhaDung: false },
         include: {
-          NhanVien: true,
           KhachHang: true,
         },
       });
@@ -292,9 +249,6 @@ export const xoaNguoiDung = async (
 
     if (user.KhachHang) {
       await tx.khachHang.delete({ where: { MaKhachHang: user.KhachHang.MaKhachHang } });
-    }
-    if (user.NhanVien) {
-      await tx.nhanVien.delete({ where: { MaNhanVien: user.NhanVien.MaNhanVien } });
     }
     await tx.taiKhoan.delete({ where: { MaTaiKhoan: maTaiKhoan } });
   });

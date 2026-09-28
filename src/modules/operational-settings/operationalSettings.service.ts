@@ -5,9 +5,16 @@ import {
 } from './operationalSettings.constants';
 import type { UpdateOperationalSettingsInput } from './operationalSettings.validator';
 
+const publicSettingsSelect = {
+  Id: true,
+  ThoiGianGiuGhePhut: true,
+  NgayCapNhat: true,
+} as const;
+
 export const getOperationalSettings = async () => {
   const existing = await prisma.cauHinhVanHanh.findUnique({
     where: { Id: OPERATIONAL_SETTINGS_ID },
+    select: publicSettingsSelect,
   });
 
   if (existing) return existing;
@@ -17,6 +24,7 @@ export const getOperationalSettings = async () => {
       Id: OPERATIONAL_SETTINGS_ID,
       ...DEFAULT_OPERATIONAL_SETTINGS,
     },
+    select: publicSettingsSelect,
   });
 };
 
@@ -29,6 +37,7 @@ export const updateOperationalSettings = async (input: UpdateOperationalSettings
       ...DEFAULT_OPERATIONAL_SETTINGS,
       ...input,
     },
+    select: publicSettingsSelect,
   });
 
 export const operationalSettings = {

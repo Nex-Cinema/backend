@@ -9,8 +9,6 @@ const integerInRange = (field: keyof typeof OPERATIONAL_SETTING_LIMITS) => {
 export const updateOperationalSettingsSchema = z
   .object({
     ThoiGianGiuGhePhut: integerInRange('ThoiGianGiuGhePhut').optional(),
-    CuaSoCheckInPhut: integerInRange('CuaSoCheckInPhut').optional(),
-    HanHuyCaTruocGio: integerInRange('HanHuyCaTruocGio').optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {

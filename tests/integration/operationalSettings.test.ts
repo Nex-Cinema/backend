@@ -26,11 +26,9 @@ describe('Operational settings API', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
-    expect(response.body.data).toEqual(expect.objectContaining({
-      ThoiGianGiuGhePhut: 10,
-      CuaSoCheckInPhut: 30,
-      HanHuyCaTruocGio: 2,
-    }));
+    expect(response.body.data.ThoiGianGiuGhePhut).toBe(10);
+    expect(response.body.data).not.toHaveProperty('CuaSoCheckInPhut');
+    expect(response.body.data).not.toHaveProperty('HanHuyCaTruocGio');
   });
 
   it('supports validated partial updates', async () => {
@@ -41,15 +39,27 @@ describe('Operational settings API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data.ThoiGianGiuGhePhut).toBe(12);
-    expect(response.body.data.CuaSoCheckInPhut).toBe(30);
+    expect(response.body.data).not.toHaveProperty('CuaSoCheckInPhut');
   });
+
+  it.each(['CuaSoCheckInPhut', 'HanHuyCaTruocGio'])(
+    'rejects obsolete setting %s',
+    async (field) => {
+      const response = await request(app)
+        .patch('/api/v1/admin/cau-hinh-van-hanh')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ [field]: 1 });
+
+      expect(response.status).toBe(422);
+    },
+  );
 
   it('rejects invalid bounds and non-admin access', async () => {
     const invalid = await request(app)
       .patch('/api/v1/admin/cau-hinh-van-hanh')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ ThoiGianGiuGhePhut: 61 });
-    expect(invalid.status).toBe(400);
+    expect(invalid.status).toBe(422);
 
     const forbidden = await request(app)
       .get('/api/v1/admin/cau-hinh-van-hanh')

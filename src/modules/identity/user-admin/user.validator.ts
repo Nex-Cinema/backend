@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../../../shared/pagination';
-import { Role } from '@prisma/client';
 
 const phoneRegex = /^(0|84)(3|5|7|8|9)[0-9]{8}$/;
 
@@ -28,18 +27,9 @@ export const createUserSchema = z
       .regex(phoneRegex, 'Số điện thoại không đúng định dạng'),
     GioiTinh: z.boolean().optional(),
     NgaySinh: z.coerce.date().optional(),
-    VaiTro: z.nativeEnum(Role, { required_error: 'Vai trò là bắt buộc' }),
-    ChucVu: z.string().max(100, 'Chức vụ tối đa 100 ký tự').optional(),
+    VaiTro: z.enum(['ADMIN', 'CUSTOMER'], { required_error: 'Vai trò là bắt buộc' }),
   })
-  .superRefine((data, ctx) => {
-    if (data.VaiTro === Role.STAFF && !data.ChucVu) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['ChucVu'],
-        message: 'Chức vụ là bắt buộc đối với nhân viên',
-      });
-    }
-  });
+  .strict();
 
 export const updateUserSchema = z.object({
   HoTen: z
@@ -58,9 +48,8 @@ export const updateUserSchema = z.object({
     .optional(),
   GioiTinh: z.boolean().optional(),
   NgaySinh: z.coerce.date().optional(),
-  ChucVu: z.string().max(100, 'Chức vụ tối đa 100 ký tự').optional(),
   KhaDung: z.boolean().optional(),
-});
+}).strict();
 
 export const adminChangePasswordSchema = z.object({
   MatKhau: z
@@ -72,13 +61,13 @@ export const adminChangePasswordSchema = z.object({
 export const userQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(DEFAULT_PAGE),
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
-  vaiTro: z.nativeEnum(Role).optional(),
+  vaiTro: z.enum(['ADMIN', 'CUSTOMER']).optional(),
   khaDung: z
     .string()
     .optional()
     .transform((val) => (val === 'true' ? true : val === 'false' ? false : undefined)),
   search: z.string().optional(),
-});
+}).strict();
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

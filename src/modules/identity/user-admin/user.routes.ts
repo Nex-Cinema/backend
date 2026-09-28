@@ -30,7 +30,7 @@ router.get('/:maTaiKhoan', controller.getChiTietNguoiDung);
 
 /**
  * @route   POST /api/v1/admin/nguoi-dung
- * @desc    Tạo mới tài khoản người dùng (ADMIN, STAFF hoặc CUSTOMER)
+ * @desc    Tạo mới tài khoản người dùng (ADMIN hoặc CUSTOMER)
  * @access  Private - ADMIN only
  */
 router.post(
@@ -41,7 +41,7 @@ router.post(
 
 /**
  * @route   PUT /api/v1/admin/nguoi-dung/:maTaiKhoan
- * @desc    Cập nhật thông tin cá nhân/chức vụ của người dùng
+ * @desc    Cập nhật thông tin người dùng
  * @access  Private - ADMIN only
  */
 router.put(

@@ -65,10 +65,6 @@ export const createTaiKhoan = async (
       ...(data.VaiTro === Role.CUSTOMER && {
         KhachHang: { create: { KhaDung: true } },
       }),
-      // Auto-create NhanVien profile for STAFF role
-      ...(data.VaiTro === Role.STAFF && {
-        NhanVien: { create: { ChucVu: 'Nhân viên', KhaDung: true } },
-      }),
     },
   });
 };
