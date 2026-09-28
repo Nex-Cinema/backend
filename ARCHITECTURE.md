@@ -11,10 +11,7 @@ The backend is organized by business capability under `src/modules`:
 - `reporting`: Admin statistics and read models
 - `operational-settings`: supporting capability for runtime booking policies
 
-The interview scope deliberately has two actors: `ADMIN` and `CUSTOMER`.
-Workforce scheduling, counter sales, admission/check-in, and the `STAFF` role
-are preserved only on the `legacy/backend-full-scope` branch, not in the active
-API or ERD.
+The system has two actors: `ADMIN` and `CUSTOMER`.
 
 ## Dependency rules
 
@@ -25,8 +22,8 @@ The application composition root (`src/routes/index.ts`), jobs, and server boots
 Inside a capability, subfeatures may collaborate directly. Keep the HTTP flow `route -> controller -> service -> repository`; omit a layer when it adds no behavior.
 
 Every surviving booking is owned by exactly one Customer. Payment and refund
-flows reference that booking; they do not introduce a second Staff-owned booking
-path. The only runtime operational policy currently exposed is seat-hold time.
+flows reference that booking. The only runtime operational policy currently
+exposed is seat-hold time.
 
 ## Adding a feature
 
