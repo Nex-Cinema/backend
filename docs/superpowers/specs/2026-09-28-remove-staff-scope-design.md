@@ -88,6 +88,8 @@ Add one Prisma migration that performs cleanup in foreign-key-safe order.
 
 Before making `MaKhachHang` required, the migration removes legacy bookings whose `MaKhachHang` is null, including their refund history, transactions, and ticket details. Affected `GheSuatChieu` rows are normalized so deleted ticket details do not leave an unexplained booking ownership state.
 
+Before removing `STAFF` from the role enum, the migration clears any seat holds owned by Staff accounts, deletes their refresh/password-reset tokens, drops the `nhan_vien` relation, and deletes the Staff accounts themselves. Admin accounts are retained even when the old schema created a `NhanVien` profile for them.
+
 The migration then:
 
 1. drops Staff/check-in foreign keys and indexes;
