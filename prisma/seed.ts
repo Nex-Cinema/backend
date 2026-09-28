@@ -47,8 +47,6 @@ async function main() {
     await prisma.suatChieu.deleteMany({});
     await prisma.danhGia.deleteMany({});
     await prisma.refreshToken.deleteMany({});
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.nhanVien.deleteMany({});
     await prisma.khachHang.deleteMany({});
     await prisma.taiKhoan.deleteMany({});
     await prisma.ghe.deleteMany({});
@@ -57,7 +55,6 @@ async function main() {
     await prisma.loaiPhong.deleteMany({});
     await prisma.loaiGhe.deleteMany({});
     await prisma.loaiNgay.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.phim.deleteMany({});
     console.log("🗑️ Đã dọn sạch database.");
   } else {
@@ -69,7 +66,6 @@ async function main() {
   // ========================
   let adminTK = await prisma.taiKhoan.findUnique({
     where: { TenDangNhap: "admin" },
-    include: { NhanVien: true }
   });
   if (!adminTK) {
     adminTK = await prisma.taiKhoan.create({
@@ -83,83 +79,11 @@ async function main() {
         NgaySinh: new Date("1990-01-01"),
         VaiTro: Role.ADMIN,
         KhaDung: true,
-        NhanVien: {
-          create: {
-            ChucVu: "Quản trị hệ thống",
-            KhaDung: true,
-          },
-        },
       },
-      include: { NhanVien: true }
     });
     console.log(`✅ Đã tạo tài khoản Admin: ${adminTK.TenDangNhap}`);
   } else {
     console.log(`ℹ️ Tài khoản Admin đã tồn tại: ${adminTK.TenDangNhap}`);
-  }
-
-  // ========================
-  // Tạo/Cập nhật tài khoản Nhân viên (Idempotent Staff Seed)
-  // ========================
-  let staffTK = await prisma.taiKhoan.findUnique({
-    where: { TenDangNhap: "nhanvien01" },
-    include: { NhanVien: true }
-  });
-  if (!staffTK) {
-    staffTK = await prisma.taiKhoan.create({
-      data: {
-        TenDangNhap: "nhanvien01",
-        MatKhau: hashedPassword,
-        HoTen: "Nhân viên test",
-        Email: "nhanvien01@example.com",
-        SoDienThoai: "0900000001",
-        GioiTinh: true,
-        NgaySinh: new Date("2000-01-01"),
-        VaiTro: Role.STAFF,
-        KhaDung: true,
-        NhanVien: {
-          create: {
-            ChucVu: "Nhân viên bán vé",
-            KhaDung: true,
-          },
-        },
-      },
-      include: { NhanVien: true }
-    });
-    console.log(`✅ Đã tạo tài khoản Nhân viên: ${staffTK.TenDangNhap}`);
-  } else {
-    console.log(`ℹ️ Tài khoản Nhân viên đã tồn tại. Đang cập nhật thông tin và mật khẩu...`);
-    staffTK = await prisma.taiKhoan.update({
-      where: { MaTaiKhoan: staffTK.MaTaiKhoan },
-      data: {
-        MatKhau: hashedPassword,
-        HoTen: "Nhân viên test",
-        Email: "nhanvien01@example.com",
-        SoDienThoai: "0900000001",
-        GioiTinh: true,
-        NgaySinh: new Date("2000-01-01"),
-        VaiTro: Role.STAFF,
-        KhaDung: true,
-      },
-      include: { NhanVien: true }
-    });
-    if (!staffTK.NhanVien) {
-      await prisma.nhanVien.create({
-        data: {
-          MaTaiKhoan: staffTK.MaTaiKhoan,
-          ChucVu: "Nhân viên bán vé",
-          KhaDung: true,
-        }
-      });
-    } else {
-      await prisma.nhanVien.update({
-        where: { MaNhanVien: staffTK.NhanVien.MaNhanVien },
-        data: {
-          ChucVu: "Nhân viên bán vé",
-          KhaDung: true,
-        }
-      });
-    }
-    console.log(`✅ Đã đảm bảo tài khoản Nhân viên hợp lệ: ${staffTK.TenDangNhap}`);
   }
 
   // ========================
@@ -192,83 +116,6 @@ async function main() {
     console.log(`✅ Đã tạo tài khoản Khách hàng: ${customerTK.TenDangNhap}`);
   } else {
     console.log(`ℹ️ Tài khoản Khách hàng đã tồn tại: ${customerTK.TenDangNhap}`);
-  }
-
-  // ========================
-  // Tạo/Cập nhật các Ca làm việc mặc định
-  // ========================
-  const caLamViecTemplates = [
-    { TenCa: "Ca sáng", GioBatDau: new Date("1970-01-01T08:00:00Z"), GioKetThuc: new Date("1970-01-01T12:00:00Z"), SoNguoiToiDa: 3 },
-    { TenCa: "Ca chiều", GioBatDau: new Date("1970-01-01T12:00:00Z"), GioKetThuc: new Date("1970-01-01T17:00:00Z"), SoNguoiToiDa: 3 },
-    { TenCa: "Ca tối", GioBatDau: new Date("1970-01-01T17:00:00Z"), GioKetThuc: new Date("1970-01-01T22:00:00Z"), SoNguoiToiDa: 3 },
-  ];
-
-  const dbCaLamViecs = [];
-  for (const template of caLamViecTemplates) {
-    let ca = await prisma.caLamViec.findFirst({
-      where: { TenCa: template.TenCa, KhaDung: true },
-    });
-    if (!ca) {
-      ca = await prisma.caLamViec.create({
-        data: template,
-      });
-      console.log(`✅ Đã tạo Ca làm việc: ${template.TenCa}`);
-    } else {
-      console.log(`ℹ️ Ca làm việc đã tồn tại: ${template.TenCa}`);
-    }
-    dbCaLamViecs.push(ca);
-  }
-
-  // ========================
-  // Đăng ký lịch làm việc (mock) cho nhanvien01 trong tuần hiện tại
-  // ========================
-  const staffAccount = await prisma.taiKhoan.findUnique({
-    where: { TenDangNhap: "nhanvien01" },
-    include: { NhanVien: true }
-  });
-
-  if (staffAccount?.NhanVien) {
-    const maNhanVien = staffAccount.NhanVien.MaNhanVien;
-    
-    // Generate dates for current week (Mon-Sun)
-    const today = bangkokCalendarDate();
-    const currentDay = today.getUTCDay(); // 0 is Sunday, 1-6 is Mon-Sat
-    const mondayDiff = currentDay === 0 ? -6 : 1 - currentDay;
-    const monday = new Date(today);
-    monday.setUTCDate(today.getUTCDate() + mondayDiff);
-
-    // Seed mock shifts for Monday (index 0) to Sunday (index 6)
-    for (let i = 0; i < 7; i++) {
-      const ngayLamViec = new Date(monday);
-      ngayLamViec.setUTCDate(monday.getUTCDate() + i);
-
-      // We assign Ca sáng on Mon/Thu/Sun, Ca chiều on Tue/Fri, Ca tối on Wed/Sat
-      let targetCaTemplate = dbCaLamViecs[0]; // Ca sáng
-      if (i === 1 || i === 4) targetCaTemplate = dbCaLamViecs[1]; // Ca chiều
-      if (i === 2 || i === 5) targetCaTemplate = dbCaLamViecs[2]; // Ca tối
-
-      // Check if registration already exists
-      const existingReg = await prisma.chiTietCaLamViec.findFirst({
-        where: {
-          MaNhanVien: maNhanVien,
-          NgayLamViec: ngayLamViec,
-          MaCa: targetCaTemplate.MaCa,
-          KhaDung: true,
-        },
-      });
-
-      if (!existingReg) {
-        await prisma.chiTietCaLamViec.create({
-          data: {
-            MaNhanVien: maNhanVien,
-            NgayLamViec: ngayLamViec,
-            MaCa: targetCaTemplate.MaCa,
-            KhaDung: true,
-          },
-        });
-        console.log(`✅ Đã mock ca ${targetCaTemplate.TenCa} vào ngày ${ngayLamViec.toISOString().split("T")[0]} cho nhanvien01`);
-      }
-    }
   }
 
   // ========================
@@ -655,7 +502,6 @@ async function main() {
   console.log("\n✨ Seed dữ liệu hoàn tất!");
   console.log("📋 Tài khoản mặc định:");
   console.log("   Admin     - TenDangNhap: admin        | MatKhau: 123456");
-  console.log("   Nhân viên - TenDangNhap: nhanvien01  | MatKhau: 123456");
   console.log("   Khách hàng- TenDangNhap: khachhang01 | MatKhau: 123456");
 }
 

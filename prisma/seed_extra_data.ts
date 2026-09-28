@@ -17,9 +17,6 @@ async function main() {
   // Lookup customer accounts
   const customer1 = await prisma.taiKhoan.findFirst({ where: { TenDangNhap: "khachhang01" }, include: { KhachHang: true } });
   
-  // Lookup staff
-  const staff = await prisma.taiKhoan.findFirst({ where: { TenDangNhap: "nhanvien01" }, include: { NhanVien: true } });
-
   if (!phong1 || !phong2 || !lnThuong || !lnCuoiTuan || !lgThuong || !lgVIP || !lgSweetbox || !customer1?.KhachHang) {
     console.error("❌ Thiếu dữ liệu nền. Hãy chạy prisma:seed trước.");
     return;
@@ -142,7 +139,6 @@ async function main() {
     customerTK: any,
     phuongThuc: PhuongThucThanhToan = "PAYOS",
     ngayDat?: Date,
-    isStaffSale: boolean = false,
   ) {
     const seats = await prisma.gheSuatChieu.findMany({
       where: { MaSuatChieu: maSuatChieu, TrangThai: "TRONG" },
@@ -165,17 +161,12 @@ async function main() {
 
     const phieuData: any = {
       TongTien: total,
+      MaKhachHang: customerTK.KhachHang.MaKhachHang,
       TrangThai: TrangThaiPhieuDatVe.DA_THANH_TOAN,
       ChiTietDatVes: {
         create: seats.map(s => ({ MaGheSuatChieu: s.MaGheSuatChieu, GiaVe: s.GiaVe })),
       },
     };
-
-    if (isStaffSale && staff?.NhanVien) {
-      phieuData.MaNhanVien = staff.NhanVien.MaNhanVien;
-    } else {
-      phieuData.MaKhachHang = customerTK.KhachHang.MaKhachHang;
-    }
 
     const phieu = await prisma.phieuDatVe.create({ data: phieuData });
 
@@ -391,12 +382,11 @@ async function main() {
         getRandomCustomer(),
         "TIEN_MAT",
         saleDate2,
-        true, // Staff sale
       );
       if (result2) {
         totalTicketsSold += result2.seats.length;
         totalRevenue += result2.total;
-        console.log(`    ✅ Suất ${spiritedShowtimes[i].ngay}: thêm ${result2.seats.length} vé (staff), ${result2.total.toLocaleString()}đ`);
+        console.log(`    ✅ Suất ${spiritedShowtimes[i].ngay}: thêm ${result2.seats.length} vé, ${result2.total.toLocaleString()}đ`);
       }
     }
   }
@@ -465,7 +455,7 @@ async function main() {
       console.log(`    ✅ Suất ${duneExtraShowtimes[i].ngay}: ${result.seats.length} vé, ${result.total.toLocaleString()}đ`);
     }
 
-    // Staff sale for some
+    // Add a second cash booking for some showtimes
     if (i >= 3) {
       const saleDate2 = new Date(2026, 4, 17 + i, 16, 0, 0);
       const result2 = await sellTickets(
@@ -474,12 +464,11 @@ async function main() {
         getRandomCustomer(),
         "TIEN_MAT",
         saleDate2,
-        true,
       );
       if (result2) {
         totalTicketsSold += result2.seats.length;
         totalRevenue += result2.total;
-        console.log(`    ✅ Suất ${duneExtraShowtimes[i].ngay}: thêm ${result2.seats.length} vé (staff), ${result2.total.toLocaleString()}đ`);
+        console.log(`    ✅ Suất ${duneExtraShowtimes[i].ngay}: thêm ${result2.seats.length} vé, ${result2.total.toLocaleString()}đ`);
       }
     }
   }

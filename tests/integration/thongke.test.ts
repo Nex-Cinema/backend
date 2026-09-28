@@ -33,8 +33,6 @@ describe('📊 Thống kê Báo cáo (Admin) Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean up transaction and booking records but preserve users
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.lichSuHoanTien.deleteMany({});
     await prisma.giaoDich.deleteMany({});
     await prisma.chiTietDatVe.deleteMany({});
@@ -143,8 +141,10 @@ describe('📊 Thống kê Báo cáo (Admin) Integration Tests', () => {
       });
 
       // 5. Create valid paid bookings
+      const customer = await prisma.khachHang.findFirstOrThrow();
       const bill1 = await prisma.phieuDatVe.create({
         data: {
+          MaKhachHang: customer.MaKhachHang,
           TongTien: 50000,
           TrangThai: TrangThaiPhieuDatVe.DA_THANH_TOAN,
         },
@@ -168,6 +168,7 @@ describe('📊 Thống kê Báo cáo (Admin) Integration Tests', () => {
 
       const bill2 = await prisma.phieuDatVe.create({
         data: {
+          MaKhachHang: customer.MaKhachHang,
           TongTien: 60000,
           TrangThai: TrangThaiPhieuDatVe.DA_THANH_TOAN,
         },

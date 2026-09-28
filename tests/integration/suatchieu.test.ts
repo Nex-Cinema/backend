@@ -40,8 +40,6 @@ describe('📅 Suất Chiếu & Ghế Suất Chiếu Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean tables sequentially in reverse dependency order
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.lichSuHoanTien.deleteMany({});
     await prisma.giaoDich.deleteMany({});
     await prisma.chiTietDatVe.deleteMany({});
@@ -294,7 +292,7 @@ describe('📅 Suất Chiếu & Ghế Suất Chiếu Integration Tests', () => {
 
       const phieu = await prisma.phieuDatVe.create({
         data: {
-          MaKhachHang: customer?.KhachHang?.MaKhachHang || null,
+          MaKhachHang: customer!.KhachHang!.MaKhachHang,
           TongTien: 71000.0,
           TrangThai: TrangThaiPhieuDatVe.DA_THANH_TOAN,
         },
@@ -388,7 +386,7 @@ describe('📅 Suất Chiếu & Ghế Suất Chiếu Integration Tests', () => {
 
       const phieu = await prisma.phieuDatVe.create({
         data: {
-          MaKhachHang: customer?.KhachHang?.MaKhachHang || null,
+          MaKhachHang: customer!.KhachHang!.MaKhachHang,
           TongTien: 71000.0,
           TrangThai: TrangThaiPhieuDatVe.DA_THANH_TOAN,
         },

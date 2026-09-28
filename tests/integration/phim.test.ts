@@ -6,7 +6,6 @@ import {
   cleanupTestData,
   createTestAdmin,
   createTestCustomer,
-  createTestStaff,
   loginAndGetToken,
   createTestMovie,
   createTicketDetailForMovie,
@@ -14,7 +13,6 @@ import {
 
 describe('🎬 Phim Integration Tests', () => {
   let adminToken: string;
-  let staffToken: string;
   let customerToken: string;
 
   beforeAll(async () => {
@@ -23,12 +21,10 @@ describe('🎬 Phim Integration Tests', () => {
 
     // Create test accounts
     await createTestAdmin('admin_test', 'password123');
-    await createTestStaff('staff_test', 'password123');
     await createTestCustomer('customer_test', 'password123');
 
     // Login and get tokens
     adminToken = await loginAndGetToken(app, 'admin_test', 'password123');
-    staffToken = await loginAndGetToken(app, 'staff_test', 'password123');
     customerToken = await loginAndGetToken(app, 'customer_test', 'password123');
   });
 
@@ -39,8 +35,6 @@ describe('🎬 Phim Integration Tests', () => {
 
   beforeEach(async () => {
     // Delete only movies, showtimes, seats, ticket details to preserve the logged in users
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.lichSuHoanTien.deleteMany({});
     await prisma.giaoDich.deleteMany({});
     await prisma.chiTietDatVe.deleteMany({});
@@ -94,11 +88,6 @@ describe('🎬 Phim Integration Tests', () => {
         .set('Authorization', `Bearer ${customerToken}`);
       expect(resCust.status).toBe(404);
 
-      // Staff access
-      const resStaff = await request(app)
-        .get(`/api/v1/phim/${movie.MaPhim}`)
-        .set('Authorization', `Bearer ${staffToken}`);
-      expect(resStaff.status).toBe(404);
     });
   });
 
