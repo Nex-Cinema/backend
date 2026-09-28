@@ -41,7 +41,22 @@ INNER JOIN `_removed_booking_seats` removed_seats
     ON removed_seats.`MaGheSuatChieu` = seat_rows.`MaGheSuatChieu`
 SET seat_rows.`TrangThai` = 'TRONG',
     seat_rows.`ThoiGianGiuGhe` = NULL,
-    seat_rows.`MaTaiKhoanGiu` = NULL;
+    seat_rows.`MaTaiKhoanGiu` = NULL
+WHERE NOT (
+    seat_rows.`TrangThai` = 'DANG_GIU'
+    AND seat_rows.`MaTaiKhoanGiu` IS NOT NULL
+    AND seat_rows.`ThoiGianGiuGhe` >= CURRENT_TIMESTAMP(3)
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM `chi_tiet_dat_ve` current_tickets
+    INNER JOIN `phieu_dat_ve` current_bookings
+        ON current_bookings.`MaPhieuDat` = current_tickets.`MaPhieuDat`
+    WHERE current_tickets.`MaGheSuatChieu` = seat_rows.`MaGheSuatChieu`
+      AND current_tickets.`KhaDung` = true
+      AND current_bookings.`KhaDung` = true
+      AND current_bookings.`TrangThai` IN ('CHO_THANH_TOAN', 'DA_THANH_TOAN')
+);
 
 DROP TEMPORARY TABLE `_removed_booking_seats`;
 

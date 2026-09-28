@@ -23,6 +23,9 @@ describe('remove Staff migration', () => {
     expect(refunds).toBeLessThan(transactions);
     expect(transactions).toBeLessThan(ticketDetails);
     expect(ticketDetails).toBeLessThan(bookings);
+    expect(sql).toContain("seat_rows.`TrangThai` = 'DANG_GIU'");
+    expect(sql).toContain('AND NOT EXISTS (');
+    expect(sql).toContain("current_bookings.`TrangThai` IN ('CHO_THANH_TOAN', 'DA_THANH_TOAN')");
 
     const heldSeats = position('UPDATE `ghe_suat_chieu` held_seats');
     const refreshTokens = position('DELETE refresh_tokens');
