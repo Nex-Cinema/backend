@@ -47,3 +47,6 @@ logs/
 # Superpowers execution ledgers
 .superpowers/
 
+# Local Git worktrees
+.worktrees/
+
