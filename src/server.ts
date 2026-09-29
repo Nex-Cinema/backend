@@ -4,8 +4,21 @@ import { env } from './config/env';
 import prisma from './config/prisma';
 import { startReleaseExpiredSeatHoldsJob } from './jobs/releaseExpiredSeatHolds.job';
 import { ensureDemoBookingData } from './modules/booking';
+import type { Server } from 'http';
 
 const PORT = env.PORT;
+
+const listenForRequests = (): Promise<Server> =>
+  new Promise((resolve, reject) => {
+    const server = app.listen(PORT);
+    const handleError = (error: Error): void => reject(error);
+
+    server.once('error', handleError);
+    server.once('listening', () => {
+      server.off('error', handleError);
+      resolve(server);
+    });
+  });
 
 // ========================
 // Graceful Shutdown Handler
@@ -30,36 +43,41 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Start Server
 // ========================
 const startServer = async (): Promise<void> => {
+  let server: Server | undefined;
+
   try {
     // Test database connection
     await prisma.$connect();
     console.log('✅ Kết nối cơ sở dữ liệu thành công');
 
+    // Bind the port before running startup jobs that can write to the database.
+    // This prevents a second process from seeding data before discovering EADDRINUSE.
+    server = await listenForRequests();
+
     if (env.SEED_DEMO_DATA_ON_START) {
       await ensureDemoBookingData();
     }
 
-    app.listen(PORT, () => {
-      if (env.NODE_ENV !== 'test') {
-        startReleaseExpiredSeatHoldsJob();
-      }
-      console.log('');
-      console.log('🎬 ================================================');
-      console.log('   Cinema Booking System Backend');
-      console.log('🎬 ================================================');
-      console.log(`🚀 Máy chủ đang chạy tại: http://localhost:${PORT}`);
-      console.log(`📡 API Prefix: ${env.API_PREFIX}`);
-      console.log(`🌍 Môi trường: ${env.NODE_ENV}`);
-      console.log('');
-      console.log('📋 Các endpoint chính:');
-      console.log(`   GET  http://localhost:${PORT}${env.API_PREFIX}/health`);
-      console.log(`   POST http://localhost:${PORT}${env.API_PREFIX}/auth/register`);
-      console.log(`   POST http://localhost:${PORT}${env.API_PREFIX}/auth/login`);
-      console.log(`   GET  http://localhost:${PORT}${env.API_PREFIX}/phim`);
-      console.log('🎬 ================================================');
-    });
+    if (env.NODE_ENV !== 'test') {
+      startReleaseExpiredSeatHoldsJob();
+    }
+    console.log('');
+    console.log('🎬 ================================================');
+    console.log('   Cinema Booking System Backend');
+    console.log('🎬 ================================================');
+    console.log(`🚀 Máy chủ đang chạy tại: http://localhost:${PORT}`);
+    console.log(`📡 API Prefix: ${env.API_PREFIX}`);
+    console.log(`🌍 Môi trường: ${env.NODE_ENV}`);
+    console.log('');
+    console.log('📋 Các endpoint chính:');
+    console.log(`   GET  http://localhost:${PORT}${env.API_PREFIX}/health`);
+    console.log(`   POST http://localhost:${PORT}${env.API_PREFIX}/auth/register`);
+    console.log(`   POST http://localhost:${PORT}${env.API_PREFIX}/auth/login`);
+    console.log(`   GET  http://localhost:${PORT}${env.API_PREFIX}/phim`);
+    console.log('🎬 ================================================');
   } catch (error) {
     console.error('❌ Không thể khởi động máy chủ:', error);
+    server?.close();
     await prisma.$disconnect();
     process.exit(1);
   }
