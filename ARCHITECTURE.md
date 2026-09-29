@@ -8,6 +8,7 @@ The backend is organized by business capability under `src/modules`:
 - `showtime`: showtime scheduling and per-showtime seat state
 - `booking`: seat holds, Customer bookings, cancellation, and booking history
 - `billing`: gateways, transactions, payments, and refunds
+- `admission`: Admin QR validation and booking-level check-in
 - `reporting`: Admin statistics and read models
 - `operational-settings`: supporting capability for runtime booking policies
 
@@ -22,8 +23,9 @@ The application composition root (`src/routes/index.ts`), jobs, and server boots
 Inside a capability, subfeatures may collaborate directly. Keep the HTTP flow `route -> controller -> service -> repository`; omit a layer when it adds no behavior.
 
 Every surviving booking is owned by exactly one Customer. Payment and refund
-flows reference that booking. The only runtime operational policy currently
-exposed is seat-hold time.
+flows reference that booking. Admission marks one paid booking, including all
+of its seats, as checked in. It does not restore Staff or workforce data. The
+only runtime operational policy currently exposed is seat-hold time.
 
 ## Adding a feature
 

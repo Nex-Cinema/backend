@@ -168,7 +168,23 @@ export const huyPhieuDatVe = async (maPhieuDat: string): Promise<PhieuDatVe> => 
     return phieuDat;
   }
 
+  if (phieuDat.DaCheckIn) {
+    throw new BadRequestError('Vé đã check-in nên không thể hủy');
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
+    const claimed = await tx.phieuDatVe.updateMany({
+      where: {
+        MaPhieuDat: maPhieuDat,
+        DaCheckIn: false,
+        TrangThai: { not: TrangThaiPhieuDatVe.DA_HUY },
+      },
+      data: { TrangThai: TrangThaiPhieuDatVe.DA_HUY },
+    });
+    if (claimed.count !== 1) {
+      throw new BadRequestError('Vé đã check-in hoặc phiếu đặt vé đã bị hủy');
+    }
+
     // Release seats
     const maGheSuatChieus = phieuDat.ChiTietDatVes.map((ct) => ct.MaGheSuatChieu);
     if (maGheSuatChieus.length > 0) {
@@ -187,10 +203,8 @@ export const huyPhieuDatVe = async (maPhieuDat: string): Promise<PhieuDatVe> => 
       data: { TrangThai: TrangThaiGiaoDich.THAT_BAI },
     });
 
-    // Update booking status
-    return tx.phieuDatVe.update({
+    return tx.phieuDatVe.findUniqueOrThrow({
       where: { MaPhieuDat: maPhieuDat },
-      data: { TrangThai: TrangThaiPhieuDatVe.DA_HUY },
     });
   });
 
@@ -218,6 +232,10 @@ export const hoanTienGiaoDich = async (
 
   if (giaoDich.TrangThai !== TrangThaiGiaoDich.THANH_CONG) {
     throw new BadRequestError('Giao dịch không ở trạng thái thành công');
+  }
+
+  if (giaoDich.PhieuDatVe.DaCheckIn) {
+    throw new BadRequestError('Vé đã check-in nên không thể hoàn tiền');
   }
 
   const transactionAmount = Number(giaoDich.SoTien);

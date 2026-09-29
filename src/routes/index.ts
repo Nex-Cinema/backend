@@ -20,6 +20,7 @@ import {
   transactionAdminRouter,
 } from '../modules/billing';
 import { adminRouter as reportingAdminRouter } from '../modules/reporting';
+import { adminRouter as admissionAdminRouter } from '../modules/admission';
 
 // Admin-only routes
 import { metadataAdminRouter, roomAdminRouter, seatMapAdminRouter } from '../modules/cinema';
@@ -69,6 +70,7 @@ adminRouter.use('/thong-ke', reportingAdminRouter);
 adminRouter.use('/hoan-tien', refundAdminRouter);
 adminRouter.use('/cong-thanh-toan', paymentGatewayAdminRouter);
 adminRouter.use('/cau-hinh-van-hanh', operationalSettingsAdminRouter);
+adminRouter.use('/admission', admissionAdminRouter);
 
 router.use('/admin', adminRouter);
 

@@ -87,6 +87,12 @@ export const getChiTietLichSu = async (maPhieuDat: string, maTaiKhoan: string) =
 
   return {
     MaPhieuDat: booking.MaPhieuDat,
+    QRPayload:
+      booking.TrangThai === 'DA_THANH_TOAN'
+        ? `QR_${booking.MaPhieuDat}`
+        : null,
+    DaCheckIn: booking.DaCheckIn,
+    ThoiGianCheckIn: booking.ThoiGianCheckIn,
     TongTien: Number(booking.TongTien),
     TrangThai: booking.TrangThai,
     NgayTao: booking.NgayTao,

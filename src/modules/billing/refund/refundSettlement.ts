@@ -4,7 +4,12 @@ import { BadRequestError } from '../../../utils/errors';
 /** Serialize both admin refund entry points on the same transaction row. */
 export const claimRefundTransaction = async (tx: Prisma.TransactionClient, id: string) => {
   const result = await tx.giaoDich.updateMany({
-    where: { MaGiaoDich: id, TrangThai: 'THANH_CONG', KhaDung: true },
+    where: {
+      MaGiaoDich: id,
+      TrangThai: 'THANH_CONG',
+      KhaDung: true,
+      PhieuDatVe: { is: { DaCheckIn: false } },
+    },
     data: { TrangThai: 'DA_HOAN_TIEN' },
   });
   if (result.count !== 1) {

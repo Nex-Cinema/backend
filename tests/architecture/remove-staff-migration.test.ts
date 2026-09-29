@@ -5,6 +5,10 @@ const migrationPath = path.resolve(
   __dirname,
   '../../prisma/migrations/20260928120000_remove_staff_scope/migration.sql',
 );
+const bookingCheckInMigrationPath = path.resolve(
+  __dirname,
+  '../../prisma/migrations/20260929040000_add_booking_checkin/migration.sql',
+);
 
 describe('remove Staff migration', () => {
   it('cleans dependent data before narrowing the schema', () => {
@@ -44,5 +48,17 @@ describe('remove Staff migration', () => {
     expect(sql).toContain('DROP COLUMN `ThoiGianCheckIn`');
     expect(sql).toContain('DROP COLUMN `CuaSoCheckInPhut`');
     expect(sql).toContain('DROP COLUMN `HanHuyCaTruocGio`');
+  });
+});
+
+describe('booking QR check-in migration', () => {
+  it('restores check-in state on the booking without restoring Staff data', () => {
+    expect(fs.existsSync(bookingCheckInMigrationPath)).toBe(true);
+    const sql = fs.readFileSync(bookingCheckInMigrationPath, 'utf8');
+
+    expect(sql).toContain('ALTER TABLE `phieu_dat_ve`');
+    expect(sql).toContain('ADD COLUMN `DaCheckIn`');
+    expect(sql).toContain('ADD COLUMN `ThoiGianCheckIn`');
+    expect(sql).not.toMatch(/nhan_vien|MaNhanVien/i);
   });
 });

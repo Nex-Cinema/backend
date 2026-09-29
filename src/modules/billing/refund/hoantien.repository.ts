@@ -41,11 +41,18 @@ export const createRefundRequest = async (
   bankInfo?: { TenNganHang: string; SoTaiKhoan: string; TenChuTaiKhoan: string },
 ) => {
   return prisma.$transaction(async (tx) => {
-    // 1. Update PhieuDatVe status to DA_HUY
-    await tx.phieuDatVe.update({
-      where: { MaPhieuDat: maPhieuDat },
+    // 1. Claim the booking so refund and check-in cannot both succeed.
+    const claimed = await tx.phieuDatVe.updateMany({
+      where: {
+        MaPhieuDat: maPhieuDat,
+        TrangThai: { in: ['DA_THANH_TOAN', 'DA_HUY'] },
+        DaCheckIn: false,
+      },
       data: { TrangThai: 'DA_HUY' },
     });
+    if (claimed.count !== 1) {
+      throw new BadRequestError('Vé đã check-in hoặc không còn có thể hoàn tiền.');
+    }
 
     // 2. Create LichSuHoanTien
     return tx.lichSuHoanTien.create({

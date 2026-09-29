@@ -340,6 +340,10 @@ export const huyPhieuDatVe = async (
     throw new BadRequestError('Phiếu đặt vé này đã được hủy trước đó.');
   }
 
+  if (booking.DaCheckIn) {
+    throw new BadRequestError('Vé đã check-in nên không thể hủy.');
+  }
+
   // 3. Verify showtime has not started
   const showtime = booking.ChiTietDatVes[0]?.GheSuatChieu?.SuatChieu;
   if (!showtime) {
@@ -387,11 +391,18 @@ export const huyPhieuDatVe = async (
 
     // Cancel paid booking and create refund request in transaction
     await prisma.$transaction(async (tx) => {
-      // Set booking status to DA_HUY
-      await tx.phieuDatVe.update({
-        where: { MaPhieuDat: maPhieuDat },
+      // Claim the booking before creating the refund so check-in cannot win too.
+      const claimed = await tx.phieuDatVe.updateMany({
+        where: {
+          MaPhieuDat: maPhieuDat,
+          TrangThai: 'DA_THANH_TOAN',
+          DaCheckIn: false,
+        },
         data: { TrangThai: 'DA_HUY' },
       });
+      if (claimed.count !== 1) {
+        throw new BadRequestError('Vé đã check-in hoặc không còn có thể hủy.');
+      }
 
       // Create refund request
       await createRefundRequest(tx, successfulTx.MaGiaoDich, Number(successfulTx.SoTien), lyDo, bankInfo);

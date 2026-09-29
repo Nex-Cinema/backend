@@ -73,7 +73,6 @@ describe('feature architecture boundaries', () => {
     const removedPaths = [
       path.join(modulesRoot, 'workforce'),
       path.join(modulesRoot, 'box-office'),
-      path.join(modulesRoot, 'admission'),
       path.join(modulesRoot, 'identity', 'staff-profile'),
       path.join(modulesRoot, 'reporting', 'staff'),
     ];
@@ -102,8 +101,6 @@ describe('feature architecture boundaries', () => {
       'model CaLamViec',
       'model ChiTietCaLamViec',
       'MaNhanVien',
-      'DaCheckIn',
-      'ThoiGianCheckIn',
       'CuaSoCheckInPhut',
       'HanHuyCaTruocGio',
     ];
@@ -113,5 +110,11 @@ describe('feature architecture boundaries', () => {
     }
     expect(schema).toMatch(/model PhieuDatVe[\s\S]*?MaKhachHang\s+String\s+@db\.VarChar\(36\)/);
     expect(schema).toMatch(/model PhieuDatVe[\s\S]*?KhachHang\s+KhachHang\s+@relation/);
+    const bookingModel = schema.match(/model PhieuDatVe\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+    const ticketDetailModel = schema.match(/model ChiTietDatVe\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+    expect(bookingModel).toMatch(/DaCheckIn\s+Boolean\s+@default\(false\)/);
+    expect(bookingModel).toMatch(/ThoiGianCheckIn\s+DateTime\?/);
+    expect(ticketDetailModel).not.toContain('DaCheckIn');
+    expect(ticketDetailModel).not.toContain('ThoiGianCheckIn');
   });
 });

@@ -38,6 +38,10 @@ export const yeuCauHoanTien = async (maTaiKhoan: string, input: RefundRequestInp
     throw new NotFoundError(`Không tìm thấy phiếu đặt vé với mã: ${input.MaPhieuDat}`);
   }
 
+  if (booking.DaCheckIn) {
+    throw new BadRequestError('Vé đã check-in nên không thể yêu cầu hoàn tiền.');
+  }
+
   // Check booking status (must be paid or cancelled already)
   if (booking.TrangThai !== 'DA_THANH_TOAN' && booking.TrangThai !== 'DA_HUY') {
     throw new BadRequestError('Chỉ có thể yêu cầu hoàn tiền cho vé đã thanh toán hoặc đã hủy.');

@@ -275,13 +275,15 @@ model GheSuatChieu {
 }
 
 model PhieuDatVe {
-  MaPhieuDat  String              @id @default(uuid()) @db.VarChar(36)
-  MaKhachHang String              @db.VarChar(36)
-  TongTien    Decimal             @db.Decimal(10, 2)
-  TrangThai   TrangThaiPhieuDatVe
-  KhaDung     Boolean             @default(true)
-  NgayTao     DateTime            @default(now())
-  NgayCapNhat DateTime?           @updatedAt
+  MaPhieuDat      String              @id @default(uuid()) @db.VarChar(36)
+  MaKhachHang     String              @db.VarChar(36)
+  TongTien        Decimal             @db.Decimal(10, 2)
+  TrangThai       TrangThaiPhieuDatVe
+  DaCheckIn       Boolean             @default(false)
+  ThoiGianCheckIn DateTime?
+  KhaDung         Boolean             @default(true)
+  NgayTao         DateTime            @default(now())
+  NgayCapNhat     DateTime?           @updatedAt
 
   // Relations
   KhachHang     KhachHang      @relation(fields: [MaKhachHang], references: [MaKhachHang])

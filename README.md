@@ -8,6 +8,7 @@ REST API for an online cinema booking system. It supports movie browsing, showti
 - Movie, cinema room, seat, and showtime management
 - Seat hold, ticket booking, cancellation, and booking history
 - PayOS and VNPay payment flows
+- Booking QR check-in for cinema admission
 - Transaction, refund, report, and operation setting management
 
 ## Tech stack
@@ -56,6 +57,6 @@ The server runs at `http://localhost:5000` by default.
 
 The project uses a feature-based architecture. Each business feature is placed in `src/modules` and exposes its public API through `index.ts`.
 
-Main modules include identity, catalog, cinema, showtime, booking, billing, reporting, and operational settings.
+Main modules include identity, catalog, cinema, showtime, booking, billing, admission, reporting, and operational settings.
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the dependency rules and folder structure.
