@@ -10,8 +10,7 @@ const BCRYPT_SALT_ROUNDS = 4; // Faster for testing
  */
 export const cleanupTestData = async () => {
   // Delete in reverse order of foreign key dependency
-  await prisma.chiTietCaLamViec.deleteMany({});
-  await prisma.caLamViec.deleteMany({});
+  await prisma.cauHinhVanHanh.deleteMany({});
   await prisma.lichSuHoanTien.deleteMany({});
   await prisma.giaoDich.deleteMany({});
   await prisma.chiTietDatVe.deleteMany({});
@@ -22,7 +21,6 @@ export const cleanupTestData = async () => {
   await prisma.phim.deleteMany({});
   await prisma.refreshToken.deleteMany({});
   await prisma.khachHang.deleteMany({});
-  await prisma.nhanVien.deleteMany({});
   await prisma.taiKhoan.deleteMany({});
   await prisma.ghe.deleteMany({});
   await prisma.phongChieu.deleteMany({});
@@ -54,37 +52,6 @@ export const createTestAdmin = async (username = 'test_admin', password = 'passw
       SoDienThoai: randomPhone,
       VaiTro: Role.ADMIN,
       KhaDung: true,
-      NhanVien: {
-        create: {
-          ChucVu: 'Test Admin Manager',
-          KhaDung: true,
-        },
-      },
-    },
-  });
-};
-
-/**
- * Create a test Staff account
- */
-export const createTestStaff = async (username = 'test_staff', password = 'password123') => {
-  const hashedPassword = await hashTestPassword(password);
-  const randomPhone = '099' + Math.floor(1000000 + Math.random() * 9000000).toString();
-  return prisma.taiKhoan.create({
-    data: {
-      TenDangNhap: username,
-      MatKhau: hashedPassword,
-      HoTen: 'Test Staff',
-      Email: `${username}@test.com`,
-      SoDienThoai: randomPhone,
-      VaiTro: Role.STAFF,
-      KhaDung: true,
-      NhanVien: {
-        create: {
-          ChucVu: 'Test Staff Ticket Seller',
-          KhaDung: true,
-        },
-      },
     },
   });
 };
@@ -211,8 +178,16 @@ export const createTicketDetailForMovie = async (maPhim: string) => {
   });
 
   // 9. Create PhieuDatVe
+  let customer = await prisma.khachHang.findFirst();
+  if (!customer) {
+    const customerAccount = await createTestCustomer(`ticket_customer_${Date.now()}`);
+    customer = await prisma.khachHang.findUniqueOrThrow({
+      where: { MaTaiKhoan: customerAccount.MaTaiKhoan },
+    });
+  }
   const phieuDatVe = await prisma.phieuDatVe.create({
     data: {
+      MaKhachHang: customer.MaKhachHang,
       TongTien: 50000.0,
       TrangThai: TrangThaiPhieuDatVe.DA_THANH_TOAN,
     },

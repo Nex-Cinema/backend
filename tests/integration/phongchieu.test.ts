@@ -36,8 +36,6 @@ describe('🚪 Phòng Chiếu & Cấu hình Ghế Integration Tests', () => {
 
   beforeEach(async () => {
     // Delete transactional items but keep users
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.lichSuHoanTien.deleteMany({});
     await prisma.giaoDich.deleteMany({});
     await prisma.chiTietDatVe.deleteMany({});
@@ -379,8 +377,10 @@ describe('🚪 Phòng Chiếu & Cấu hình Ghế Integration Tests', () => {
         },
       });
 
+      const customer = await prisma.khachHang.findFirstOrThrow();
       const phieuDatVe = await prisma.phieuDatVe.create({
         data: {
+          MaKhachHang: customer.MaKhachHang,
           TongTien: 50000,
           TrangThai: TrangThaiPhieuDatVe.DA_THANH_TOAN,
         },

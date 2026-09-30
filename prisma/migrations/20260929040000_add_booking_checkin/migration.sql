@@ -1,0 +1,3 @@
+ALTER TABLE `phieu_dat_ve`
+  ADD COLUMN `DaCheckIn` BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN `ThoiGianCheckIn` DATETIME(3) NULL;

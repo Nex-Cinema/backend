@@ -32,8 +32,6 @@ describe('🏷️ Metadata Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean up relational records but preserve users
-    await prisma.chiTietCaLamViec.deleteMany({});
-    await prisma.caLamViec.deleteMany({});
     await prisma.lichSuHoanTien.deleteMany({});
     await prisma.giaoDich.deleteMany({});
     await prisma.chiTietDatVe.deleteMany({});

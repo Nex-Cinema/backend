@@ -60,7 +60,7 @@ async function main() {
       },
     });
     await prisma.giaoDich.create({
-      data: { MaPhieuDat: phieu.MaPhieuDat, PhuongThuc: "VNPAY", SoTien: total, TrangThai: "THANH_CONG" },
+      data: { MaPhieuDat: phieu.MaPhieuDat, PhuongThuc: "PAYOS", SoTien: total, TrangThai: "THANH_CONG" },
     });
     return phieu;
   }

@@ -1,4 +1,6 @@
-import { releaseExpiredHolds } from '../repositories/ghesuatchieu.repository';
+import { seatHoldOperations } from '../modules/showtime';
+
+const { releaseExpiredHolds } = seatHoldOperations;
 
 let intervalId: NodeJS.Timeout | null = null;
 

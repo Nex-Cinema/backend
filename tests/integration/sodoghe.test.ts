@@ -84,14 +84,25 @@ describe('🪑 Sơ Đồ Ghế Mẫu Integration Tests', () => {
       expect(detailRes.body.data.TenSoDo).toBe('Standard 8x8');
     });
 
-    it('should fail to create template with invalid dimensions', async () => {
+    it('should allow 15x15 and reject dimensions above 15', async () => {
+      const validRes = await request(app)
+        .post('/api/v1/admin/so-do-ghe')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          TenSoDo: 'Largest Valid Map',
+          SoHang: 15,
+          SoCot: 15,
+        });
+
+      expect(validRes.status).toBe(201);
+
       const res = await request(app)
         .post('/api/v1/admin/so-do-ghe')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           TenSoDo: 'Invalid Map',
-          SoHang: 0, // Invalid (min 1)
-          SoCot: 25, // Invalid (max 20)
+          SoHang: 16,
+          SoCot: 15,
         });
 
       expect(res.status).toBe(422);
