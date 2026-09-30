@@ -18,6 +18,7 @@ import {
   refundRouter,
   refundAdminRouter,
   transactionAdminRouter,
+  counterSaleAdminRouter,
 } from '../modules/billing';
 import { adminRouter as reportingAdminRouter } from '../modules/reporting';
 import { adminRouter as admissionAdminRouter } from '../modules/admission';
@@ -71,6 +72,7 @@ adminRouter.use('/hoan-tien', refundAdminRouter);
 adminRouter.use('/cong-thanh-toan', paymentGatewayAdminRouter);
 adminRouter.use('/cau-hinh-van-hanh', operationalSettingsAdminRouter);
 adminRouter.use('/admission', admissionAdminRouter);
+adminRouter.use('/ban-ve-tai-quay', counterSaleAdminRouter);
 
 router.use('/admin', adminRouter);
 

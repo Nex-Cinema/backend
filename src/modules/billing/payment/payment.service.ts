@@ -11,8 +11,60 @@ import {
   stringifyVNPayParams,
   verifyVNPaySignature,
 } from '../../../utils/vnpay.util';
+import type { Prisma } from '@prisma/client';
 
 const { findCustomerByAccountId } = identityQueries;
+
+type PayosBooking = Prisma.PhieuDatVeGetPayload<{
+  include: { ChiTietDatVes: { include: { GheSuatChieu: true } } };
+}>;
+type PayosTransaction = Prisma.GiaoDichGetPayload<Record<string, never>>;
+
+const issuePayosLink = async (booking: PayosBooking, transaction: PayosTransaction) => {
+  const amount = Number(booking.TongTien);
+  let orderCode = 0;
+  let isUnique = false;
+  let attempts = 0;
+  while (!isUnique && attempts < 10) {
+    orderCode = Number(Date.now().toString().substring(3) + Math.floor(Math.random() * 1000));
+    const existingTransaction = await prisma.giaoDich.findFirst({
+      where: { MaGiaoDichNgoai: orderCode.toString() },
+    });
+    isUnique = !existingTransaction;
+    attempts += 1;
+  }
+  if (!isUnique) {
+    throw new BadRequestError('Không thể tạo mã đơn hàng duy nhất lúc này. Vui lòng thử lại.');
+  }
+
+  const payosResponse = await payOS.paymentRequests.create({
+    orderCode,
+    amount,
+    description: `DAT VE PHIM ${booking.MaPhieuDat.substring(0, 8)}`.toUpperCase(),
+    cancelUrl: env.PAYOS_CANCEL_URL,
+    returnUrl: env.PAYOS_RETURN_URL,
+    items: booking.ChiTietDatVes.map((detail) => ({
+      name: `Ghe ${detail.MaGheSuatChieu.substring(0, 8)}`.toUpperCase(),
+      quantity: 1,
+      price: Number(detail.GiaVe),
+    })),
+  });
+
+  await prisma.giaoDich.update({
+    where: { MaGiaoDich: transaction.MaGiaoDich },
+    data: { MaGiaoDichNgoai: orderCode.toString() },
+  });
+
+  return {
+    checkoutUrl: payosResponse.checkoutUrl,
+    qrCode: payosResponse.qrCode || null,
+    orderCode: payosResponse.orderCode,
+    maGiaoDich: transaction.MaGiaoDich,
+    maPhieuDat: booking.MaPhieuDat,
+    amount: payosResponse.amount,
+    expiresAt: payosResponse.expiredAt || null,
+  };
+};
 
 /**
  * Creates a PayOS payment link for a pending booking.
@@ -78,61 +130,36 @@ export const createPayosLink = async (maPhieuDat: string, maTaiKhoan: string) =>
     throw new NotFoundError('Không tìm thấy giao dịch chờ xử lý với phương thức PayOS cho phiếu đặt vé này.');
   }
 
-  const amount = Number(booking.TongTien);
+  return issuePayosLink(booking, transaction);
+};
 
-  // 4. Generate unique integer orderCode and verify uniqueness in DB
-  let orderCode = 0;
-  let isUnique = false;
-  let attempts = 0;
-  while (!isUnique && attempts < 10) {
-    orderCode = Number(Date.now().toString().substring(3) + Math.floor(Math.random() * 1000));
-    const existingTx = await prisma.giaoDich.findFirst({
-      where: { MaGiaoDichNgoai: orderCode.toString() },
-    });
-    if (!existingTx) {
-      isUnique = true;
-    }
-    attempts++;
+export const createCounterPayosLink = async (maPhieuDat: string, adminAccountId: string) => {
+  await assertPaymentGatewayAvailable('PAYOS');
+  const booking = await prisma.phieuDatVe.findFirst({
+    where: { MaPhieuDat: maPhieuDat, KenhDat: 'TAI_QUAY', MaKhachHang: null, KhaDung: true },
+    include: { ChiTietDatVes: { include: { GheSuatChieu: true } } },
+  });
+  if (!booking) throw new NotFoundError('Không tìm thấy phiếu bán vé tại quầy.');
+  if (booking.TrangThai !== 'CHO_THANH_TOAN') {
+    throw new BadRequestError(`Phiếu đặt không còn chờ thanh toán (trạng thái: ${booking.TrangThai}).`);
   }
 
-  if (!isUnique) {
-    throw new BadRequestError('Không thể tạo mã đơn hàng duy nhất lúc này. Vui lòng thử lại.');
+  const now = new Date();
+  const isHeldByAdmin = booking.ChiTietDatVes.every(({ GheSuatChieu }) => (
+    GheSuatChieu.TrangThai === 'DANG_GIU'
+    && GheSuatChieu.MaTaiKhoanGiu === adminAccountId
+    && Boolean(GheSuatChieu.ThoiGianGiuGhe)
+    && GheSuatChieu.ThoiGianGiuGhe! >= now
+  ));
+  if (!isHeldByAdmin) {
+    throw new BadRequestError('Ghế tại quầy đã hết hạn giữ hoặc không thuộc phiên Admin hiện tại.');
   }
 
-  // 5. Build items for PayOS
-  const items = booking.ChiTietDatVes.map((ct) => ({
-    name: `Ghe ${ct.MaGheSuatChieu.substring(0, 8)}`.toUpperCase(),
-    quantity: 1,
-    price: Number(ct.GiaVe),
-  }));
-
-  // 6. Call PayOS API to generate link
-  const payosResponse = await payOS.paymentRequests.create({
-    orderCode,
-    amount,
-    description: `DAT VE PHIM ${maPhieuDat.substring(0, 8)}`.toUpperCase(),
-    cancelUrl: env.PAYOS_CANCEL_URL,
-    returnUrl: env.PAYOS_RETURN_URL,
-    items,
+  const transaction = await prisma.giaoDich.findFirst({
+    where: { MaPhieuDat: maPhieuDat, PhuongThuc: 'PAYOS', TrangThai: 'CHO_XU_LY', KhaDung: true },
   });
-
-  // 7. Update transaction record with the orderCode
-  await prisma.giaoDich.update({
-    where: { MaGiaoDich: transaction.MaGiaoDich },
-    data: {
-      MaGiaoDichNgoai: orderCode.toString(),
-    },
-  });
-
-  return {
-    checkoutUrl: payosResponse.checkoutUrl,
-    qrCode: payosResponse.qrCode || null,
-    orderCode: payosResponse.orderCode,
-    maGiaoDich: transaction.MaGiaoDich,
-    maPhieuDat: maPhieuDat,
-    amount: payosResponse.amount,
-    expiresAt: payosResponse.expiredAt || null,
-  };
+  if (!transaction) throw new NotFoundError('Không tìm thấy giao dịch PayOS tại quầy đang chờ xử lý.');
+  return issuePayosLink(booking, transaction);
 };
 
 /**
@@ -261,11 +288,9 @@ export const handleWebhook = async (webhookBody: any) => {
 /**
  * Checks transaction status and polls PayOS API for synchronization if pending.
  */
-export const checkPaymentStatus = async (maGiaoDich: string, maTaiKhoan: string) => {
-  const customer = await findCustomerByAccountId(maTaiKhoan);
-  if (!customer) {
-    throw new BadRequestError('Tài khoản không phải là khách hàng hợp lệ.');
-  }
+export const checkPaymentStatus = async (maGiaoDich: string, maTaiKhoan: string, allowCounterSale = false) => {
+  const customer = allowCounterSale ? null : await findCustomerByAccountId(maTaiKhoan);
+  if (!allowCounterSale && !customer) throw new BadRequestError('Tài khoản không phải là khách hàng hợp lệ.');
 
   // Find transaction
   const transaction = await prisma.giaoDich.findFirst({
@@ -291,8 +316,10 @@ export const checkPaymentStatus = async (maGiaoDich: string, maTaiKhoan: string)
     throw new NotFoundError('Không tìm thấy giao dịch.');
   }
 
-  // Verify only customer owner can query
-  if (transaction.PhieuDatVe.KhachHang?.MaTaiKhoan !== maTaiKhoan) {
+  const canView = allowCounterSale
+    ? transaction.PhieuDatVe.KenhDat === 'TAI_QUAY'
+    : transaction.PhieuDatVe.KhachHang?.MaTaiKhoan === maTaiKhoan;
+  if (!canView) {
     throw new BadRequestError('Bạn không có quyền xem thông tin giao dịch này.');
   }
 
@@ -599,3 +626,6 @@ export const checkVnpayStatus = async (maGiaoDich: string, maTaiKhoan: string) =
     maPhieuDat: transaction.MaPhieuDat,
   };
 };
+
+export const checkCounterPayosStatus = (maGiaoDich: string) =>
+  checkPaymentStatus(maGiaoDich, '', true);

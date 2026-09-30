@@ -32,6 +32,11 @@ enum TrangThaiPhieuDatVe {
   HET_HAN
 }
 
+enum KenhDatVe {
+  TRUC_TUYEN
+  TAI_QUAY
+}
+
 enum PhuongThucThanhToan {
   VNPAY
   TIEN_MAT
@@ -276,7 +281,10 @@ model GheSuatChieu {
 
 model PhieuDatVe {
   MaPhieuDat      String              @id @default(uuid()) @db.VarChar(36)
-  MaKhachHang     String              @db.VarChar(36)
+  MaKhachHang     String?             @db.VarChar(36)
+  KenhDat         KenhDatVe           @default(TRUC_TUYEN)
+  TenKhachHangTaiQuay String?         @db.VarChar(255)
+  SoDienThoaiTaiQuay String?          @db.VarChar(20)
   TongTien        Decimal             @db.Decimal(10, 2)
   TrangThai       TrangThaiPhieuDatVe
   DaCheckIn       Boolean             @default(false)
@@ -286,7 +294,7 @@ model PhieuDatVe {
   NgayCapNhat     DateTime?           @updatedAt
 
   // Relations
-  KhachHang     KhachHang      @relation(fields: [MaKhachHang], references: [MaKhachHang])
+  KhachHang     KhachHang?     @relation(fields: [MaKhachHang], references: [MaKhachHang])
   ChiTietDatVes ChiTietDatVe[]
   GiaoDichs     GiaoDich[]
 

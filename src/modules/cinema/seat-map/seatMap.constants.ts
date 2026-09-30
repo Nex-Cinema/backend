@@ -1,4 +1,4 @@
 export const SEAT_MAP_LIMITS = {
-  maxRows: 20,
-  maxColumns: 20,
+  maxRows: 15,
+  maxColumns: 15,
 } as const;

@@ -25,6 +25,8 @@ prisma/migrations/*
 !prisma/migrations/20260928120000_remove_staff_scope/migration.sql
 !prisma/migrations/20260929040000_add_booking_checkin/
 !prisma/migrations/20260929040000_add_booking_checkin/migration.sql
+!prisma/migrations/20260929160000_add_counter_sales/
+!prisma/migrations/20260929160000_add_counter_sales/migration.sql
 
 # TypeScript
 *.tsbuildinfo

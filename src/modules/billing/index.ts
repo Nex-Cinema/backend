@@ -4,3 +4,4 @@ export { default as paymentGatewayAdminRouter } from './gateway/paymentGateway.r
 export { default as refundRouter } from './refund/hoantien.routes';
 export { default as refundAdminRouter } from './refund/hoantien.admin.routes';
 export { default as transactionAdminRouter } from './transaction/giaodich.routes';
+export { default as counterSaleAdminRouter } from './counter-sale/counterSale.routes';

@@ -32,6 +32,8 @@ export const getDanhSachPhieuDatVe = async (
   if (search) {
     where.OR = [
       { MaPhieuDat: { contains: search } },
+      { TenKhachHangTaiQuay: { contains: search } },
+      { SoDienThoaiTaiQuay: { contains: search } },
       {
         KhachHang: {
           TaiKhoan: {
